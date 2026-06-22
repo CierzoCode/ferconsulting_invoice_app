@@ -1,0 +1,230 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Ferconsulting - Facturacion</title>
+  <link rel="stylesheet" href="{{ url_for('static', path='/css/styles.css') }}" />
+</head>
+<body>
+  <div class="login-overlay" id="loginOverlay">
+    <form class="login-card" id="loginForm">
+      <img src="{{ url_for('static', path='/img/ferconsulting_logo.png') }}" alt="Ferconsulting" />
+      <h1>Acceso</h1>
+      <label>Usuario<input id="loginUser" value="Admin" autocomplete="username" /></label>
+      <label>Contrasena<input id="loginPassword" type="password" value="1234" autocomplete="current-password" /></label>
+      <button class="btn primary" type="submit">Entrar</button>
+      <p class="muted" id="loginError"></p>
+    </form>
+  </div>
+
+  <div class="app-shell">
+    <header class="toolbar no-print">
+      <div>
+        <p class="eyebrow">Factura Ferconsulting 2026</p>
+        <h1>Generador de facturas</h1>
+        <p class="muted"><span id="storageMode">Cargando datos...</span> <span id="sessionUser"></span></p>
+      </div>
+      <div class="toolbar-actions">
+        <button class="btn secondary" id="invoiceViewBtn" type="button">Factura</button>
+        <button class="btn secondary" id="configViewBtn" type="button">Configuracion</button>
+        <button class="btn secondary" id="voiceBtn" type="button">Voz</button>
+        <button class="btn secondary" id="printBtn" type="button">1 Crear PDF</button>
+        <button class="btn primary" id="registerBtn" type="button">2 Registrar factura</button>
+        <button class="btn secondary" id="logoutBtn" type="button">Salir</button>
+      </div>
+    </header>
+
+    <main class="layout app-view active" id="invoiceView">
+      <section class="invoice-card" id="invoicePrintable">
+        <div class="invoice-actions no-print">
+          <button class="link-btn" id="clearBtn" type="button">Limpiar formulario</button>
+          <button class="link-btn" id="addLineBtn" type="button">Anadir linea</button>
+        </div>
+
+        <div class="invoice-header">
+          <div class="logo-block">
+            <img src="{{ url_for('static', path='/img/ferconsulting_logo.png') }}" alt="Ferconsulting" />
+          </div>
+          <div class="invoice-title">
+            <h2>Factura</h2>
+            <div class="meta-grid">
+              <span>Fecha</span><strong id="invoiceDateText"></strong>
+              <span>Numero</span><strong><span id="invoicePrefixText">FAC-2026.</span><input id="sequenceInput" class="inline-number no-print" type="number" min="1" readonly /><span class="print-only" id="sequencePrint"></span></strong>
+            </div>
+          </div>
+        </div>
+
+        <section class="customer-grid">
+          <label>Cliente:</label>
+          <div>
+            <input id="clientInput" list="clientOptions" placeholder="Selecciona o escribe un cliente" autocomplete="off" />
+            <datalist id="clientOptions"></datalist>
+          </div>
+          <label>C.I.F.:</label><output id="clientTaxId"></output>
+          <label>Direccion:</label><output id="clientAddress"></output>
+          <label>C.P. / Ciudad:</label><output id="clientCity"></output>
+          <label>Pago:</label>
+          <select id="paymentMethodInput">
+            <option value="TRANSFERENCIA ES15 2100 3586 5022 0012 1937 LA CAIXA">Transferencia</option>
+            <option value="GIRO">Giro</option>
+          </select>
+          <label>Envio:</label>
+          <select id="deliveryMethodInput">
+            <option value="email">Email</option>
+            <option value="postal">Correo postal</option>
+          </select>
+        </section>
+
+        <section class="postal-window">
+          <span>Ventana sobre</span>
+          <strong id="windowClient">Cliente</strong>
+          <p id="windowAddress">Direccion</p>
+          <p id="windowCity">C.P. Ciudad</p>
+        </section>
+
+        <table class="invoice-table">
+          <thead>
+            <tr>
+              <th class="qty">Cantidad</th>
+              <th>Servicio</th>
+              <th class="unit">Unidad</th>
+              <th class="price">Precio</th>
+              <th class="discount">Descuento</th>
+              <th class="amount">Importe</th>
+            </tr>
+          </thead>
+          <tbody id="lineItems"></tbody>
+        </table>
+        <datalist id="serviceOptions"></datalist>
+
+        <label class="notes-block">
+          Conceptos / comentarios
+          <textarea id="notesInput" rows="4" placeholder="Anade conceptos, comentarios o instrucciones que deban aparecer en la factura."></textarea>
+        </label>
+
+        <div class="totals">
+          <div><span>Subtotal</span><strong id="subtotalText">0,00 EUR</strong></div>
+          <div><span>I.V.A. 21%</span><strong id="vatText">0,00 EUR</strong></div>
+          <div class="grand"><span>Total</span><strong id="totalText">0,00 EUR</strong></div>
+        </div>
+
+        <div class="payment-block">
+          <p><strong>FORMA DE PAGO:</strong> <span id="paymentMethodText">TRANSFERENCIA ES15 2100 3586 5022 0012 1937 LA CAIXA</span></p>
+          <p><strong>ENVIO:</strong> <span id="deliveryMethodText">Email</span></p>
+          <p class="web-link">Visite nuestra web: asesoragricola.com</p>
+        </div>
+
+        <footer class="invoice-footer">
+          <img src="{{ url_for('static', path='/img/agricultura_smart.png') }}" alt="Agricultura Smart" />
+          <p>INSCRITA EN EL REGISTRO MERCANTIL DE ZARAGOZA, FOLIO ELECTRONICO 1000426422459, HOJA Z-74459, INSCRIPCION 1</p>
+          <p class="legal">De conformidad con lo establecido en la normativa vigente en Proteccion de Datos de Caracter Personal, le informamos que sus datos seran incorporados al sistema de tratamiento titularidad de FERCONSULTING AGROTECH S.L con CIF B19827476 y domicilio social sito en Puerta de la Villa sn, 50280 Calatorao (Zaragoza), con la finalidad de poder remitirle la correspondiente factura. Podra ejercer los derechos de acceso, rectificacion, limitacion de tratamiento, supresion, portabilidad y oposicion/revocacion dirigiendo su peticion a la direccion postal Puerta de la Villa sn, 50280 Calatorao (Zaragoza) o a traves de correo electronico ferconsulting@asesoragricola.com.</p>
+          <p class="company-line">Ferconsulting Agrotech S.L. | B19827476 | Puerta de la Villa S/N, Calatorao (Zaragoza), C.P.: 50280 | ferconsulting@asesoragricola.com</p>
+        </footer>
+      </section>
+
+      <aside class="side-panel no-print">
+        <section class="panel-card">
+          <h3>Resumen</h3>
+          <dl>
+            <div><dt>Cliente</dt><dd id="summaryClient">-</dd></div>
+            <div><dt>Lineas</dt><dd id="summaryLines">0</dd></div>
+            <div><dt>Total</dt><dd id="summaryTotal">0,00 EUR</dd></div>
+          </dl>
+        </section>
+        <section class="panel-card">
+          <h3>Ultimas facturas</h3>
+          <div id="lastInvoices" class="last-list muted">Sin registros todavia.</div>
+        </section>
+        <section class="panel-card hint">
+          <h3>Gestion</h3>
+          <p>Desde Configuracion puedes editar maestros, usuarios e historico. El envio por email queda preparado para conectar SMTP o proveedor externo.</p>
+        </section>
+      </aside>
+    </main>
+
+    <main class="config-view app-view no-print" id="configView">
+      <section class="config-header">
+        <div>
+          <p class="eyebrow">Configuracion</p>
+          <h2>Maestros y facturas</h2>
+        </div>
+        <button class="btn primary" id="refreshConfigBtn" type="button">Actualizar datos</button>
+      </section>
+
+      <nav class="config-tabs" aria-label="Secciones de configuracion">
+        <button class="tab-btn active" data-tab="clients" type="button">Clientes</button>
+        <button class="tab-btn" data-tab="services" type="button">Servicios</button>
+        <button class="tab-btn" data-tab="users" type="button">Usuarios</button>
+        <button class="tab-btn" data-tab="invoices" type="button">Historico facturas</button>
+      </nav>
+
+      <section class="config-panel active" id="clientsPanel">
+        <form class="editor-grid" id="clientForm">
+          <input type="hidden" id="clientIdEdit" />
+          <label>Codigo<input id="clientCodeEdit" /></label>
+          <label>Nombre<input id="clientNameEdit" required /></label>
+          <label>CIF/NIF<input id="clientTaxEdit" /></label>
+          <label>Direccion<input id="clientAddressEdit" /></label>
+          <label>C.P.<input id="clientPostalEdit" /></label>
+          <label>Ciudad<input id="clientCityEdit" /></label>
+          <label>Email<input id="clientEmailEdit" type="email" /></label>
+          <div class="form-actions"><button class="btn primary" type="submit">Guardar cliente</button><button class="btn secondary" id="newClientBtn" type="button">Nuevo</button></div>
+        </form>
+        <div class="table-wrap"><table class="config-table"><thead><tr><th>Nombre</th><th>CIF</th><th>C.P.</th><th>Ciudad</th><th>Email</th><th></th></tr></thead><tbody id="clientsTable"></tbody></table></div>
+      </section>
+
+      <section class="config-panel" id="servicesPanel">
+        <form class="editor-grid" id="serviceForm">
+          <input type="hidden" id="serviceIdEdit" />
+          <label>Codigo<input id="serviceCodeEdit" /></label>
+          <label>Servicio<input id="serviceNameEdit" required /></label>
+          <label>Unidad<input id="serviceUnitEdit" /></label>
+          <label>Precio<input id="servicePriceEdit" type="number" step="0.0001" min="0" /></label>
+          <label>Activo<select id="serviceActiveEdit"><option value="true">Si</option><option value="false">No</option></select></label>
+          <div class="form-actions"><button class="btn primary" type="submit">Guardar servicio</button><button class="btn secondary" id="newServiceBtn" type="button">Nuevo</button></div>
+        </form>
+        <div class="table-wrap"><table class="config-table"><thead><tr><th>Servicio</th><th>Unidad</th><th>Precio</th><th>Activo</th><th></th></tr></thead><tbody id="servicesTable"></tbody></table></div>
+      </section>
+
+      <section class="config-panel" id="usersPanel">
+        <form class="editor-grid" id="userForm">
+          <input type="hidden" id="userIdEdit" />
+          <label>Usuario<input id="usernameEdit" required /></label>
+          <label>Contrasena<input id="userPasswordEdit" type="password" placeholder="Dejar vacio para mantener" /></label>
+          <label>Email envio<input id="userEmailEdit" type="email" /></label>
+          <label>Rol<input id="userRoleEdit" value="admin" /></label>
+          <label>Activo<select id="userActiveEdit"><option value="true">Si</option><option value="false">No</option></select></label>
+          <div class="form-actions"><button class="btn primary" type="submit">Guardar usuario</button><button class="btn secondary" id="newUserBtn" type="button">Nuevo</button></div>
+        </form>
+        <div class="table-wrap"><table class="config-table"><thead><tr><th>Usuario</th><th>Email envio</th><th>Rol</th><th>Activo</th><th></th></tr></thead><tbody id="usersTable"></tbody></table></div>
+      </section>
+
+      <section class="config-panel" id="invoicesPanel">
+        <div class="table-wrap"><table class="config-table"><thead><tr><th>Factura</th><th>Cliente</th><th>Pago</th><th>Envio</th><th>Estado</th><th>Total</th><th></th></tr></thead><tbody id="invoicesTable"></tbody></table></div>
+      </section>
+    </main>
+  </div>
+
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+  <section class="voice-panel no-print" id="voicePanel" aria-live="polite">
+    <div class="voice-card">
+      <div class="voice-header">
+        <div>
+          <p class="eyebrow">Asistente de voz</p>
+          <h2>Crear factura hablando</h2>
+        </div>
+        <button class="mini-btn" id="voiceCloseBtn" type="button">Cerrar</button>
+      </div>
+      <div class="voice-status" id="voiceStatus">Pulsa iniciar para comenzar.</div>
+      <div class="voice-transcript" id="voiceTranscript">Sin respuesta todavia.</div>
+      <div class="voice-actions">
+        <button class="btn primary" id="voiceStartBtn" type="button">Iniciar</button>
+        <button class="btn secondary" id="voiceRepeatBtn" type="button">Repetir pregunta</button>
+        <button class="btn secondary" id="voiceStopBtn" type="button">Detener</button>
+      </div>
+    </div>
+  </section>
+  <script src="{{ url_for('static', path='/js/app.js') }}"></script>
+</body>
+</html>

@@ -1,0 +1,166 @@
+{
+  "FACTURA": [
+    {
+      "cell": "F9",
+      "formula": "=TODAY()"
+    },
+    {
+      "cell": "D10",
+      "formula": "=IFERROR(VLOOKUP(D9,'CLIENTES'!$B:$F,2,0),\" \")"
+    },
+    {
+      "cell": "D11",
+      "formula": "=IFERROR(VLOOKUP(D9,'CLIENTES'!$B:$F,3,0),\" \")"
+    },
+    {
+      "cell": "U11",
+      "formula": "=TODAY()"
+    },
+    {
+      "cell": "D12",
+      "formula": "=IFERROR(VLOOKUP(D9,'CLIENTES'!$B:$F,5,0),\" \")"
+    },
+    {
+      "cell": "N12",
+      "formula": "=G10"
+    },
+    {
+      "cell": "E18",
+      "formula": "=IF(IFERROR(VLOOKUP(InvoiceDetails3[[#This Row],[Servicio]],SERVICIOS!$B:$D,2,0),\" \")=0,\" \",IFERROR(VLOOKUP(InvoiceDetails3[[#This Row],[Servicio]],SERVICIOS!$B:$D,2,0),\" \"))"
+    },
+    {
+      "cell": "F18",
+      "formula": "=IF(IFERROR(VLOOKUP(InvoiceDetails3[[#This Row],[Servicio]],SERVICIOS!$B:$D,3,0),\" \")=0,\" \",IFERROR(VLOOKUP(InvoiceDetails3[[#This Row],[Servicio]],SERVICIOS!$B:$D,3,0),\" \"))"
+    },
+    {
+      "cell": "H18",
+      "formula": "=IF(InvoiceDetails3[[#This Row],[Cantidad]]=\"\",\" \",InvoiceDetails3[[#This Row],[Cantidad]]*InvoiceDetails3[[#This Row],[Precio]]*(1-InvoiceDetails3[[#This Row],[Descuento]]))"
+    },
+    {
+      "cell": "E19",
+      "formula": "=IF(IFERROR(VLOOKUP(InvoiceDetails3[[#This Row],[Servicio]],SERVICIOS!$B:$D,2,0),\" \")=0,\" \",IFERROR(VLOOKUP(InvoiceDetails3[[#This Row],[Servicio]],SERVICIOS!$B:$D,2,0),\" \"))"
+    },
+    {
+      "cell": "F19",
+      "formula": "=IF(IFERROR(VLOOKUP(InvoiceDetails3[[#This Row],[Servicio]],SERVICIOS!$B:$D,3,0),\" \")=0,\" \",IFERROR(VLOOKUP(InvoiceDetails3[[#This Row],[Servicio]],SERVICIOS!$B:$D,3,0),\" \"))"
+    },
+    {
+      "cell": "H19",
+      "formula": "=IF(InvoiceDetails3[[#This Row],[Cantidad]]=\"\",\" \",InvoiceDetails3[[#This Row],[Cantidad]]*InvoiceDetails3[[#This Row],[Precio]]*(1-InvoiceDetails3[[#This Row],[Descuento]]))"
+    },
+    {
+      "cell": "E20",
+      "formula": "=IF(IFERROR(VLOOKUP(InvoiceDetails3[[#This Row],[Servicio]],SERVICIOS!$B:$D,2,0),\" \")=0,\" \",IFERROR(VLOOKUP(InvoiceDetails3[[#This Row],[Servicio]],SERVICIOS!$B:$D,2,0),\" \"))"
+    },
+    {
+      "cell": "F20",
+      "formula": "=IF(IFERROR(VLOOKUP(InvoiceDetails3[[#This Row],[Servicio]],SERVICIOS!$B:$D,3,0),\" \")=0,\" \",IFERROR(VLOOKUP(InvoiceDetails3[[#This Row],[Servicio]],SERVICIOS!$B:$D,3,0),\" \"))"
+    },
+    {
+      "cell": "H20",
+      "formula": "=IF(InvoiceDetails3[[#This Row],[Cantidad]]=\"\",\" \",InvoiceDetails3[[#This Row],[Cantidad]]*InvoiceDetails3[[#This Row],[Precio]]*(1-InvoiceDetails3[[#This Row],[Descuento]]))"
+    },
+    {
+      "cell": "E21",
+      "formula": "=IF(IFERROR(VLOOKUP(InvoiceDetails3[[#This Row],[Servicio]],SERVICIOS!$B:$D,2,0),\" \")=0,\" \",IFERROR(VLOOKUP(InvoiceDetails3[[#This Row],[Servicio]],SERVICIOS!$B:$D,2,0),\" \"))"
+    },
+    {
+      "cell": "F21",
+      "formula": "=IF(IFERROR(VLOOKUP(InvoiceDetails3[[#This Row],[Servicio]],SERVICIOS!$B:$D,3,0),\" \")=0,\" \",IFERROR(VLOOKUP(InvoiceDetails3[[#This Row],[Servicio]],SERVICIOS!$B:$D,3,0),\" \"))"
+    },
+    {
+      "cell": "H21",
+      "formula": "=IF(InvoiceDetails3[[#This Row],[Cantidad]]=\"\",\" \",InvoiceDetails3[[#This Row],[Cantidad]]*InvoiceDetails3[[#This Row],[Precio]]*(1-InvoiceDetails3[[#This Row],[Descuento]]))"
+    },
+    {
+      "cell": "E22",
+      "formula": "=IF(IFERROR(VLOOKUP(InvoiceDetails3[[#This Row],[Servicio]],SERVICIOS!$B:$D,2,0),\" \")=0,\" \",IFERROR(VLOOKUP(InvoiceDetails3[[#This Row],[Servicio]],SERVICIOS!$B:$D,2,0),\" \"))"
+    },
+    {
+      "cell": "F22",
+      "formula": "=IF(IFERROR(VLOOKUP(InvoiceDetails3[[#This Row],[Servicio]],SERVICIOS!$B:$D,3,0),\" \")=0,\" \",IFERROR(VLOOKUP(InvoiceDetails3[[#This Row],[Servicio]],SERVICIOS!$B:$D,3,0),\" \"))"
+    },
+    {
+      "cell": "H22",
+      "formula": "=IF(InvoiceDetails3[[#This Row],[Cantidad]]=\"\",\" \",InvoiceDetails3[[#This Row],[Cantidad]]*InvoiceDetails3[[#This Row],[Precio]]*(1-InvoiceDetails3[[#This Row],[Descuento]]))"
+    },
+    {
+      "cell": "E23",
+      "formula": "=IF(IFERROR(VLOOKUP(InvoiceDetails3[[#This Row],[Servicio]],SERVICIOS!$B:$D,2,0),\" \")=0,\" \",IFERROR(VLOOKUP(InvoiceDetails3[[#This Row],[Servicio]],SERVICIOS!$B:$D,2,0),\" \"))"
+    },
+    {
+      "cell": "F23",
+      "formula": "=IF(IFERROR(VLOOKUP(InvoiceDetails3[[#This Row],[Servicio]],SERVICIOS!$B:$D,3,0),\" \")=0,\" \",IFERROR(VLOOKUP(InvoiceDetails3[[#This Row],[Servicio]],SERVICIOS!$B:$D,3,0),\" \"))"
+    },
+    {
+      "cell": "H23",
+      "formula": "=IF(InvoiceDetails3[[#This Row],[Cantidad]]=\"\",\" \",InvoiceDetails3[[#This Row],[Cantidad]]*InvoiceDetails3[[#This Row],[Precio]]*(1-InvoiceDetails3[[#This Row],[Descuento]]))"
+    },
+    {
+      "cell": "E24",
+      "formula": "=IF(IFERROR(VLOOKUP(InvoiceDetails3[[#This Row],[Servicio]],SERVICIOS!$B:$D,2,0),\" \")=0,\" \",IFERROR(VLOOKUP(InvoiceDetails3[[#This Row],[Servicio]],SERVICIOS!$B:$D,2,0),\" \"))"
+    },
+    {
+      "cell": "F24",
+      "formula": "=IF(IFERROR(VLOOKUP(InvoiceDetails3[[#This Row],[Servicio]],SERVICIOS!$B:$D,3,0),\" \")=0,\" \",IFERROR(VLOOKUP(InvoiceDetails3[[#This Row],[Servicio]],SERVICIOS!$B:$D,3,0),\" \"))"
+    },
+    {
+      "cell": "H24",
+      "formula": "=IF(InvoiceDetails3[[#This Row],[Cantidad]]=\"\",\" \",InvoiceDetails3[[#This Row],[Cantidad]]*InvoiceDetails3[[#This Row],[Precio]]*(1-InvoiceDetails3[[#This Row],[Descuento]]))"
+    },
+    {
+      "cell": "E25",
+      "formula": "=IF(IFERROR(VLOOKUP(InvoiceDetails3[[#This Row],[Servicio]],SERVICIOS!$B:$D,2,0),\" \")=0,\" \",IFERROR(VLOOKUP(InvoiceDetails3[[#This Row],[Servicio]],SERVICIOS!$B:$D,2,0),\" \"))"
+    },
+    {
+      "cell": "F25",
+      "formula": "=IF(IFERROR(VLOOKUP(InvoiceDetails3[[#This Row],[Servicio]],SERVICIOS!$B:$D,3,0),\" \")=0,\" \",IFERROR(VLOOKUP(InvoiceDetails3[[#This Row],[Servicio]],SERVICIOS!$B:$D,3,0),\" \"))"
+    },
+    {
+      "cell": "H25",
+      "formula": "=IF(InvoiceDetails3[[#This Row],[Cantidad]]=\"\",\" \",InvoiceDetails3[[#This Row],[Cantidad]]*InvoiceDetails3[[#This Row],[Precio]]*(1-InvoiceDetails3[[#This Row],[Descuento]]))"
+    },
+    {
+      "cell": "E26",
+      "formula": "=IF(IFERROR(VLOOKUP(InvoiceDetails3[[#This Row],[Servicio]],SERVICIOS!$B:$D,2,0),\" \")=0,\" \",IFERROR(VLOOKUP(InvoiceDetails3[[#This Row],[Servicio]],SERVICIOS!$B:$D,2,0),\" \"))"
+    },
+    {
+      "cell": "F26",
+      "formula": "=IF(IFERROR(VLOOKUP(InvoiceDetails3[[#This Row],[Servicio]],SERVICIOS!$B:$D,3,0),\" \")=0,\" \",IFERROR(VLOOKUP(InvoiceDetails3[[#This Row],[Servicio]],SERVICIOS!$B:$D,3,0),\" \"))"
+    },
+    {
+      "cell": "H26",
+      "formula": "=IF(InvoiceDetails3[[#This Row],[Cantidad]]=\"\",\" \",InvoiceDetails3[[#This Row],[Cantidad]]*InvoiceDetails3[[#This Row],[Precio]]*(1-InvoiceDetails3[[#This Row],[Descuento]]))"
+    },
+    {
+      "cell": "E27",
+      "formula": "=IF(IFERROR(VLOOKUP(InvoiceDetails3[[#This Row],[Servicio]],SERVICIOS!$B:$D,2,0),\" \")=0,\" \",IFERROR(VLOOKUP(InvoiceDetails3[[#This Row],[Servicio]],SERVICIOS!$B:$D,2,0),\" \"))"
+    },
+    {
+      "cell": "F27",
+      "formula": "=IF(IFERROR(VLOOKUP(InvoiceDetails3[[#This Row],[Servicio]],SERVICIOS!$B:$D,3,0),\" \")=0,\" \",IFERROR(VLOOKUP(InvoiceDetails3[[#This Row],[Servicio]],SERVICIOS!$B:$D,3,0),\" \"))"
+    },
+    {
+      "cell": "H27",
+      "formula": "=IF(InvoiceDetails3[[#This Row],[Cantidad]]=\"\",\" \",InvoiceDetails3[[#This Row],[Cantidad]]*InvoiceDetails3[[#This Row],[Precio]]*(1-InvoiceDetails3[[#This Row],[Descuento]]))"
+    },
+    {
+      "cell": "G28",
+      "formula": "=IF(SUM(InvoiceDetails3[Importe])>0,SUM(InvoiceDetails3[Importe]),\"\")"
+    },
+    {
+      "cell": "G29",
+      "formula": "=G28*0.21"
+    },
+    {
+      "cell": "G30",
+      "formula": "=IFERROR(IF(G28=0,\"\",(G28+G29)),\" \")"
+    }
+  ],
+  "CLIENTES": [
+    {
+      "cell": "A11",
+      "formula": "=-FACTURA!D9"
+    }
+  ]
+}

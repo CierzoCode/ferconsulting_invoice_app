@@ -1,0 +1,8 @@
+.env
+__pycache__/
+*.pyc
+.venv/
+data/local_invoices.json
+data/users.json
+data/client_prices.json
+uvicorn.*.log

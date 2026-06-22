@@ -1,0 +1,12 @@
+[
+  {
+    "module": "Módulo1.bas",
+    "stream_path": "VBA/Módulo1",
+    "code": "Attribute VB_Name = \"Módulo1\"\r\nSub PDF()\r\nAttribute PDF.VB_ProcData.VB_Invoke_Func = \" \\n14\"\r\n'\r\n' PDF Macro\r\n'\r\n\r\n'\r\n    Sheets(\"FACTURA\").Select\r\n    Range(\"A1:I39\").Select\r\n    ActiveWindow.SmallScroll Down:=-36\r\n    Selection.PrintOut Copies:=1, Collate:=True\r\n    Range(\"A1\").Select\r\nEnd Sub\r\nSub REGISTRO()\r\nAttribute REGISTRO.VB_ProcData.VB_Invoke_Func = \" \\n14\"\r\n'\r\n' REGISTRO Macro\r\n'\r\n\r\n'\r\n    Sheets(\"FACTURA\").Select\r\n    Range(\"I10\").Select\r\n    ActiveCell.FormulaR1C1 = \"1\"\r\n    Range(\"J10\").Select\r\n    Application.CutCopyMode = False\r\n    ActiveCell.FormulaR1C1 = \"=RC[-1]+RC[-3]\"\r\n    Range(\"J10\").Select\r\n    Selection.Copy\r\n    Range(\"G10\").Select\r\n    Selection.PasteSpecial Paste:=xlPasteValues, Operation:=xlNone, SkipBlanks _\r\n        :=False, Transpose:=False\r\n    Range(\"I10:J10\").Select\r\n    Application.CutCopyMode = False\r\n    Selection.ClearContents\r\n    Range(\"D9\").Select\r\n    Selection.ClearContents\r\n    ActiveWindow.SmallScroll Down:=15\r\n    Range(\"InvoiceDetails3[Cantidad]\").Select\r\n    Selection.ClearContents\r\n    Range(\"InvoiceDetails3[Servicio]\").Select\r\n    Selection.ClearContents\r\n    Range(\"InvoiceDetails3[Descuento]\").Select\r\n    Selection.ClearContents\r\n    ActiveWindow.SmallScroll Down:=-12\r\n    Range(\"D9\").Select\r\nEnd Sub\r\n"
+  },
+  {
+    "module": "ThisWorkbook.cls",
+    "stream_path": "VBA/ThisWorkbook",
+    "code": "Attribute VB_Name = \"ThisWorkbook\"\r\nAttribute VB_Base = \"0{00020819-0000-0000-C000-000000000046}\"\r\nAttribute VB_GlobalNameSpace = False\r\nAttribute VB_Creatable = False\r\nAttribute VB_PredeclaredId = True\r\nAttribute VB_Exposed = True\r\nAttribute VB_TemplateDerived = False\r\nAttribute VB_Customizable = True\r\n"
+  }
+]

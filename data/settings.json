@@ -1,0 +1,22 @@
+{
+  "fiscal_year": 2026,
+  "invoice_prefix": "FAC-",
+  "next_invoice_sequence": 141,
+  "vat_rate": 0.21,
+  "default_payment_method": "TRANSFERENCIA ES15 2100 3586 5022 0012 1937 LA CAIXA",
+  "company": {
+    "legal_name": "FERCONSULTING AGROTECH S.L.",
+    "trade_name": "Ferconsulting",
+    "tax_id": "B19827476",
+    "address": "Puerta de la Villa S/N, 50280 Calatorao (Zaragoza)",
+    "email": "ferconsulting@asesoragricola.com",
+    "website": "asesoragricola.com",
+    "bank_transfer": "ES15 2100 3586 5022 0012 1937 LA CAIXA"
+  },
+  "excel_tables": {
+    "invoice_details_range": "FACTURA!C17:H27",
+    "clients_lookup_range": "CLIENTES!B:F",
+    "services_lookup_range": "SERVICIOS!B:D",
+    "print_area_macro_range": "FACTURA!A1:I39"
+  }
+}

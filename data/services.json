@@ -1,0 +1,952 @@
+[
+  {
+    "id": 1,
+    "source_key": "SERVICIOS:2",
+    "source_row": 2,
+    "code": "3",
+    "name": "Creaccion de operadora (PDRA) y Manual de operaciones",
+    "unit": "",
+    "unit_price": 460.0,
+    "active": true
+  },
+  {
+    "id": 2,
+    "source_key": "SERVICIOS:3",
+    "source_row": 3,
+    "code": "5",
+    "name": "Trabajos con dron (kg aplicado)",
+    "unit": "",
+    "unit_price": 0.3,
+    "active": true
+  },
+  {
+    "id": 3,
+    "source_key": "SERVICIOS:4",
+    "source_row": 4,
+    "code": "1",
+    "name": "Trabajos dron",
+    "unit": "Ha",
+    "unit_price": 40.0,
+    "active": true
+  },
+  {
+    "id": 4,
+    "source_key": "SERVICIOS:5",
+    "source_row": 5,
+    "code": "2",
+    "name": "Trabajos dron  (h)",
+    "unit": "h",
+    "unit_price": 70.0,
+    "active": true
+  },
+  {
+    "id": 5,
+    "source_key": "SERVICIOS:6",
+    "source_row": 6,
+    "code": "4",
+    "name": "Trabajos dron \"dto volumen\"",
+    "unit": "Ha",
+    "unit_price": 25.0,
+    "active": true
+  },
+  {
+    "id": 6,
+    "source_key": "SERVICIOS:7",
+    "source_row": 7,
+    "code": "6",
+    "name": "Servicios de asesoramiento",
+    "unit": "",
+    "unit_price": 622.0,
+    "active": true
+  },
+  {
+    "id": 7,
+    "source_key": "SERVICIOS:8",
+    "source_row": 8,
+    "code": "7",
+    "name": "Servicio de transporte nacional de mercancías por carretera",
+    "unit": "h",
+    "unit_price": 60.0,
+    "active": true
+  },
+  {
+    "id": 8,
+    "source_key": "SERVICIOS:9",
+    "source_row": 9,
+    "code": "8",
+    "name": "Siembra con dron",
+    "unit": "ha",
+    "unit_price": 40.0,
+    "active": true
+  },
+  {
+    "id": 9,
+    "source_key": "SERVICIOS:10",
+    "source_row": 10,
+    "code": "9",
+    "name": "ASESORAMIENTO Y REALIZACION CUADERNO DE CAMPO",
+    "unit": "",
+    "unit_price": 121.33,
+    "active": true
+  },
+  {
+    "id": 10,
+    "source_key": "SERVICIOS:11",
+    "source_row": 11,
+    "code": "10",
+    "name": "Alquiler drones",
+    "unit": "",
+    "unit_price": 1200.0,
+    "active": true
+  },
+  {
+    "id": 11,
+    "source_key": "SERVICIOS:12",
+    "source_row": 12,
+    "code": "11",
+    "name": "DESPLAZAMIENTO",
+    "unit": "€/km",
+    "unit_price": 0.5,
+    "active": true
+  },
+  {
+    "id": 12,
+    "source_key": "SERVICIOS:13",
+    "source_row": 13,
+    "code": "12",
+    "name": "Preparación e impartición en la jornada 13 sobre \"Uso de drones y otras imágenes para la mejora de la eficiencia en el uso de recursos\" realizada en Montesusín (Huesca), el 10 de marzo de 2026, realizada dentro de las Jornadas Técnicas de Digitalización para el Sector Agroalimentario y de las Subvenciones servicios de intercambio de conocimientos y actividades de formación e información de ámbito supraautonómico, destinadas al sector agroalimentario y forestal, en el Marco del Plan Estratégico de la Política Agraria Común 2023-2027.",
+    "unit": "h",
+    "unit_price": 90.0,
+    "active": true
+  },
+  {
+    "id": 13,
+    "source_key": "SERVICIOS:14",
+    "source_row": 14,
+    "code": "",
+    "name": "Alquiler dron",
+    "unit": "dia",
+    "unit_price": 200.0,
+    "active": true
+  },
+  {
+    "id": 14,
+    "source_key": "SERVICIOS:15",
+    "source_row": 15,
+    "code": "",
+    "name": "Puesta en marcha Bateria Ariestolas",
+    "unit": "",
+    "unit_price": 460.0,
+    "active": true
+  },
+  {
+    "id": 15,
+    "source_key": "SERVICIOS:16",
+    "source_row": 16,
+    "code": "",
+    "name": "GESTORIA DRON PDRA",
+    "unit": "",
+    "unit_price": 460.0,
+    "active": true
+  },
+  {
+    "id": 16,
+    "source_key": "SERVICIOS:17",
+    "source_row": 17,
+    "code": "",
+    "name": "Plus formación",
+    "unit": "€/km",
+    "unit_price": 0.25,
+    "active": true
+  },
+  {
+    "id": 17,
+    "source_key": "SERVICIOS:19",
+    "source_row": 19,
+    "code": "",
+    "name": "Carcasa Bomba T50",
+    "unit": "",
+    "unit_price": 79.0,
+    "active": true
+  },
+  {
+    "id": 18,
+    "source_key": "SERVICIOS:20",
+    "source_row": 20,
+    "code": "",
+    "name": "Recambio DJI AGRAS: Portaboquillas, cableado electrovalvula , aceite bombas.",
+    "unit": "",
+    "unit_price": 30.0,
+    "active": true
+  },
+  {
+    "id": 19,
+    "source_key": "SERVICIOS:21",
+    "source_row": 21,
+    "code": "",
+    "name": "Mano de obra",
+    "unit": "h",
+    "unit_price": 50.0,
+    "active": true
+  },
+  {
+    "id": 20,
+    "source_key": "SERVICIOS:22",
+    "source_row": 22,
+    "code": "",
+    "name": "Tornilleria",
+    "unit": "",
+    "unit_price": 1.5,
+    "active": true
+  },
+  {
+    "id": 21,
+    "source_key": "SERVICIOS:23",
+    "source_row": 23,
+    "code": "",
+    "name": "DJI MAVIC 3 MULTISPECTRAL , 1 BATERIA INCLUIDA Y CARGADOR",
+    "unit": "",
+    "unit_price": 3978.0,
+    "active": true
+  },
+  {
+    "id": 22,
+    "source_key": "SERVICIOS:24",
+    "source_row": 24,
+    "code": "",
+    "name": "PACK VUELA MAS (3 BATERIAS EXTRA Y CARGADOR RAPIDO)",
+    "unit": "",
+    "unit_price": 498.0,
+    "active": true
+  },
+  {
+    "id": 23,
+    "source_key": "SERVICIOS:25",
+    "source_row": 25,
+    "code": "",
+    "name": "OPCIONALES: FLIGHTCASE , TARJETA MEMORIA  , HELICES REPUESTO Y PROTECTOR CAMARA",
+    "unit": "",
+    "unit_price": 750.0,
+    "active": true
+  },
+  {
+    "id": 24,
+    "source_key": "SERVICIOS:26",
+    "source_row": 26,
+    "code": "",
+    "name": "DJI AGRAS T50 , 3 BATERIAS , 2 BATERIAS MANDO , CARGADOR RAPIDO C10000 , CARGADOR BATERIAS MANDO.  OPCIONALES: ENFRIADOR, REPUESTO BASICO , HERRAMIENTA, FUNDA MANDO, BOMBA 16L/MIN",
+    "unit": "",
+    "unit_price": 19631.0,
+    "active": true
+  },
+  {
+    "id": 25,
+    "source_key": "SERVICIOS:27",
+    "source_row": 27,
+    "code": "",
+    "name": "HELICE DJI T50",
+    "unit": "",
+    "unit_price": 70.0,
+    "active": true
+  },
+  {
+    "id": 26,
+    "source_key": "SERVICIOS:28",
+    "source_row": 28,
+    "code": "",
+    "name": "ENVIO",
+    "unit": "",
+    "unit_price": 15.0,
+    "active": true
+  },
+  {
+    "id": 27,
+    "source_key": "SERVICIOS:29",
+    "source_row": 29,
+    "code": "",
+    "name": "PARTICIPACIÓN CON DRON EN PRUEBAS DE DISTRIBUCIÓN",
+    "unit": "h",
+    "unit_price": 46.0,
+    "active": true
+  },
+  {
+    "id": 28,
+    "source_key": "SERVICIOS:30",
+    "source_row": 30,
+    "code": "",
+    "name": "DJI AGRAS T50 USADO Y EMISORA",
+    "unit": "",
+    "unit_price": 8999.0,
+    "active": true
+  },
+  {
+    "id": 29,
+    "source_key": "SERVICIOS:31",
+    "source_row": 31,
+    "code": "",
+    "name": "OPCIONALES: REPUESTO BASICO , HERRAMIENTA, FUNDA MANDO, BOMBA 16L/MIN",
+    "unit": "",
+    "unit_price": 670.0,
+    "active": true
+  },
+  {
+    "id": 30,
+    "source_key": "SERVICIOS:32",
+    "source_row": 32,
+    "code": "",
+    "name": "PEQUEÑO REPUESTO Y CABLES DJI t50",
+    "unit": "",
+    "unit_price": 131.0,
+    "active": true
+  },
+  {
+    "id": 31,
+    "source_key": "SERVICIOS:33",
+    "source_row": 33,
+    "code": "",
+    "name": "CARGADOR DJI WB 37",
+    "unit": "",
+    "unit_price": 66.0,
+    "active": true
+  },
+  {
+    "id": 32,
+    "source_key": "SERVICIOS:34",
+    "source_row": 34,
+    "code": "",
+    "name": "KIT ASPERSORES DJI T50",
+    "unit": "",
+    "unit_price": 545.0,
+    "active": true
+  },
+  {
+    "id": 33,
+    "source_key": "SERVICIOS:35",
+    "source_row": 35,
+    "code": "",
+    "name": "Aplicación inorganicos",
+    "unit": "t",
+    "unit_price": 19.0,
+    "active": true
+  },
+  {
+    "id": 34,
+    "source_key": "SERVICIOS:36",
+    "source_row": 36,
+    "code": "",
+    "name": "DESPLAZAMIENTO Y COMPARECENCIA",
+    "unit": "",
+    "unit_price": 202.0,
+    "active": true
+  },
+  {
+    "id": 35,
+    "source_key": "SERVICIOS:38",
+    "source_row": 38,
+    "code": "",
+    "name": "TRABAJOS DRON TERMICO",
+    "unit": "",
+    "unit_price": 2125.0,
+    "active": true
+  },
+  {
+    "id": 36,
+    "source_key": "SERVICIOS:39",
+    "source_row": 39,
+    "code": "",
+    "name": "Módulo de bomba de rodete T25/T50",
+    "unit": "",
+    "unit_price": 39.0,
+    "active": true
+  },
+  {
+    "id": 37,
+    "source_key": "SERVICIOS:40",
+    "source_row": 40,
+    "code": "",
+    "name": "Iman bomba de separación manguito T25/T50",
+    "unit": "",
+    "unit_price": 48.0,
+    "active": true
+  },
+  {
+    "id": 38,
+    "source_key": "SERVICIOS:41",
+    "source_row": 41,
+    "code": "",
+    "name": "Carcasa de la bomba T25/T50",
+    "unit": "",
+    "unit_price": 19.0,
+    "active": true
+  },
+  {
+    "id": 39,
+    "source_key": "SERVICIOS:42",
+    "source_row": 42,
+    "code": "",
+    "name": "Preparacion",
+    "unit": "h",
+    "unit_price": 90.0,
+    "active": true
+  },
+  {
+    "id": 40,
+    "source_key": "SERVICIOS:43",
+    "source_row": 43,
+    "code": "",
+    "name": "e impartición en la jornada 12 sobre \"Uso de drones y otras imágenes para la mejora de la eficiencia en el uso de recursos\" realizada en Caspe (Zaragoza), el 28 de octubre de 2025, realizada dentro de las Jornadas Técnicas de Digitalización para el Sector Agroalimentario y de las Subvenciones servicios de intercambio de conocimientos y actividades de formación e información de ámbito supraautonómico, destinadas al sector agroalimentario y forestal, en el Marco del Plan Estratégico de la Política Agraria Común 2023-2027.",
+    "unit": "h",
+    "unit_price": 90.0,
+    "active": true
+  },
+  {
+    "id": 41,
+    "source_key": "SERVICIOS:44",
+    "source_row": 44,
+    "code": "",
+    "name": "Helices DJI T50",
+    "unit": "",
+    "unit_price": 89.0,
+    "active": true
+  },
+  {
+    "id": 42,
+    "source_key": "SERVICIOS:45",
+    "source_row": 45,
+    "code": "",
+    "name": "Tornilleria y varios",
+    "unit": "",
+    "unit_price": 10.0,
+    "active": true
+  },
+  {
+    "id": 43,
+    "source_key": "SERVICIOS:46",
+    "source_row": 46,
+    "code": "",
+    "name": "Portaboquillas",
+    "unit": "",
+    "unit_price": 45.0,
+    "active": true
+  },
+  {
+    "id": 44,
+    "source_key": "SERVICIOS:47",
+    "source_row": 47,
+    "code": "",
+    "name": "Electrovalvula DJI T50",
+    "unit": "",
+    "unit_price": 129.0,
+    "active": true
+  },
+  {
+    "id": 45,
+    "source_key": "SERVICIOS:48",
+    "source_row": 48,
+    "code": "",
+    "name": "MOTOR CENTRIFUGA T50",
+    "unit": "",
+    "unit_price": 385.0,
+    "active": true
+  },
+  {
+    "id": 46,
+    "source_key": "SERVICIOS:49",
+    "source_row": 49,
+    "code": "",
+    "name": "MOTOR DJI T50",
+    "unit": "",
+    "unit_price": 499.0,
+    "active": true
+  },
+  {
+    "id": 47,
+    "source_key": "SERVICIOS:50",
+    "source_row": 50,
+    "code": "",
+    "name": "MANO DE OBRA",
+    "unit": "",
+    "unit_price": 50.0,
+    "active": true
+  },
+  {
+    "id": 48,
+    "source_key": "SERVICIOS:51",
+    "source_row": 51,
+    "code": "",
+    "name": "Cable electrovalvula",
+    "unit": "",
+    "unit_price": 49.0,
+    "active": true
+  },
+  {
+    "id": 49,
+    "source_key": "SERVICIOS:52",
+    "source_row": 52,
+    "code": "",
+    "name": "DJI MAVIC 3 MULTISPECTRAL",
+    "unit": "",
+    "unit_price": 3778.0,
+    "active": true
+  },
+  {
+    "id": 50,
+    "source_key": "SERVICIOS:53",
+    "source_row": 53,
+    "code": "",
+    "name": "PACK VUELA MAS (3 BATERIAS )",
+    "unit": "",
+    "unit_price": 572.0,
+    "active": true
+  },
+  {
+    "id": 51,
+    "source_key": "SERVICIOS:54",
+    "source_row": 54,
+    "code": "",
+    "name": "OPCIONALES: RTK,  FLIGHTCASE  , HELICES REPUESTO Y PROTECTOR CAMARA",
+    "unit": "",
+    "unit_price": 750.0,
+    "active": true
+  },
+  {
+    "id": 52,
+    "source_key": "SERVICIOS:55",
+    "source_row": 55,
+    "code": "",
+    "name": "LICENCIA SMARTFARM 2 AÑOS",
+    "unit": "",
+    "unit_price": 499.0,
+    "active": true
+  },
+  {
+    "id": 53,
+    "source_key": "SERVICIOS:56",
+    "source_row": 56,
+    "code": "",
+    "name": "CARGADOR RAPIDO 100W",
+    "unit": "",
+    "unit_price": 116.0,
+    "active": true
+  },
+  {
+    "id": 54,
+    "source_key": "SERVICIOS:57",
+    "source_row": 57,
+    "code": "",
+    "name": "KZ MI servicios varios",
+    "unit": "",
+    "unit_price": 1500.0,
+    "active": true
+  },
+  {
+    "id": 55,
+    "source_key": "SERVICIOS:58",
+    "source_row": 58,
+    "code": "",
+    "name": "Puesta en marcha y formación",
+    "unit": "",
+    "unit_price": 499.0,
+    "active": true
+  },
+  {
+    "id": 56,
+    "source_key": "SERVICIOS:59",
+    "source_row": 59,
+    "code": "",
+    "name": "ARANDELAS T50",
+    "unit": "",
+    "unit_price": 2.0,
+    "active": true
+  },
+  {
+    "id": 57,
+    "source_key": "SERVICIOS:60",
+    "source_row": 60,
+    "code": "",
+    "name": "REUNION PRESENCIAL DE CONSULTORIA",
+    "unit": "h",
+    "unit_price": 50.0,
+    "active": true
+  },
+  {
+    "id": 58,
+    "source_key": "SERVICIOS:61",
+    "source_row": 61,
+    "code": "",
+    "name": "DJI MAVIC 3 MULTIESPECTRAL.",
+    "unit": "",
+    "unit_price": 3600.0,
+    "active": true
+  },
+  {
+    "id": 59,
+    "source_key": "SERVICIOS:62",
+    "source_row": 62,
+    "code": "",
+    "name": "KIT DJI AGRAS T50 , 3 baterias , cargador c10000 , 2 wb37 , hub wb37 , usbc100w y Genergy Stelvio",
+    "unit": "",
+    "unit_price": 16975.8,
+    "active": true
+  },
+  {
+    "id": 60,
+    "source_key": "SERVICIOS:63",
+    "source_row": 63,
+    "code": "",
+    "name": "GENERADOR CAROD CMK.-12 AE",
+    "unit": "",
+    "unit_price": 2395.0,
+    "active": true
+  },
+  {
+    "id": 61,
+    "source_key": "SERVICIOS:64",
+    "source_row": 64,
+    "code": "",
+    "name": "COLABORACION ENTEC NITROFOSKA MANZANA",
+    "unit": "",
+    "unit_price": 508.0,
+    "active": true
+  },
+  {
+    "id": 62,
+    "source_key": "SERVICIOS:65",
+    "source_row": 65,
+    "code": "",
+    "name": "DRON T50 + MANDO USADO",
+    "unit": "",
+    "unit_price": 4400.0,
+    "active": true
+  },
+  {
+    "id": 63,
+    "source_key": "SERVICIOS:66",
+    "source_row": 66,
+    "code": "",
+    "name": "ROTOR BOMBA T50",
+    "unit": "",
+    "unit_price": 90.0,
+    "active": true
+  },
+  {
+    "id": 64,
+    "source_key": "SERVICIOS:67",
+    "source_row": 67,
+    "code": "",
+    "name": "USB-C Power Adapter 100w",
+    "unit": "",
+    "unit_price": 90.0,
+    "active": true
+  },
+  {
+    "id": 65,
+    "source_key": "SERVICIOS:68",
+    "source_row": 68,
+    "code": "",
+    "name": "Cargador WCH2 para baterias WB37",
+    "unit": "",
+    "unit_price": 63.0,
+    "active": true
+  },
+  {
+    "id": 66,
+    "source_key": "SERVICIOS:69",
+    "source_row": 69,
+    "code": "",
+    "name": "Bateria WB37",
+    "unit": "",
+    "unit_price": 111.0,
+    "active": true
+  },
+  {
+    "id": 67,
+    "source_key": "SERVICIOS:70",
+    "source_row": 70,
+    "code": "",
+    "name": "Enfriador baterias DB2160",
+    "unit": "",
+    "unit_price": 290.0,
+    "active": true
+  },
+  {
+    "id": 68,
+    "source_key": "SERVICIOS:71",
+    "source_row": 71,
+    "code": "",
+    "name": "DJI AGRAS T50 (MANDO RC PLUS INCLUIDO)",
+    "unit": "",
+    "unit_price": 10651.0,
+    "active": true
+  },
+  {
+    "id": 69,
+    "source_key": "SERVICIOS:72",
+    "source_row": 72,
+    "code": "",
+    "name": "BATERIA T50 DB1560",
+    "unit": "",
+    "unit_price": 2215.0,
+    "active": true
+  },
+  {
+    "id": 70,
+    "source_key": "SERVICIOS:73",
+    "source_row": 73,
+    "code": "",
+    "name": "CARGADOR C10000 T50",
+    "unit": "",
+    "unit_price": 1343.0,
+    "active": true
+  },
+  {
+    "id": 71,
+    "source_key": "SERVICIOS:74",
+    "source_row": 74,
+    "code": "",
+    "name": "CABLEADO CARGADOR",
+    "unit": "",
+    "unit_price": 15.0,
+    "active": true
+  },
+  {
+    "id": 72,
+    "source_key": "SERVICIOS:75",
+    "source_row": 75,
+    "code": "",
+    "name": "CELLULAR DONGLE 2",
+    "unit": "",
+    "unit_price": 149.0,
+    "active": true
+  },
+  {
+    "id": 73,
+    "source_key": "SERVICIOS:76",
+    "source_row": 76,
+    "code": "",
+    "name": "BOMBA 16LT/M",
+    "unit": "",
+    "unit_price": 500.0,
+    "active": true
+  },
+  {
+    "id": 74,
+    "source_key": "SERVICIOS:77",
+    "source_row": 77,
+    "code": "",
+    "name": "GENERADOR GENERGY STELVIO 18KW",
+    "unit": "",
+    "unit_price": 3800.0,
+    "active": true
+  },
+  {
+    "id": 75,
+    "source_key": "SERVICIOS:78",
+    "source_row": 78,
+    "code": "",
+    "name": "BATERIA OCASIÓN T50",
+    "unit": "",
+    "unit_price": 1200.0,
+    "active": true
+  },
+  {
+    "id": 76,
+    "source_key": "SERVICIOS:79",
+    "source_row": 79,
+    "code": "",
+    "name": "DJI AGRAS T100 con Spraying Sistem (Mando RC PLUS incluido)",
+    "unit": "",
+    "unit_price": 11710.0,
+    "active": true
+  },
+  {
+    "id": 77,
+    "source_key": "SERVICIOS:80",
+    "source_row": 80,
+    "code": "",
+    "name": "Batería T100 DB2160",
+    "unit": "",
+    "unit_price": 2658.0,
+    "active": true
+  },
+  {
+    "id": 78,
+    "source_key": "SERVICIOS:81",
+    "source_row": 81,
+    "code": "",
+    "name": "Cargador C12000 para bateria DB2160",
+    "unit": "",
+    "unit_price": 1385.0,
+    "active": true
+  },
+  {
+    "id": 79,
+    "source_key": "SERVICIOS:82",
+    "source_row": 82,
+    "code": "",
+    "name": "Tanque esparcidor de solidos T100",
+    "unit": "",
+    "unit_price": 1940.0,
+    "active": true
+  },
+  {
+    "id": 80,
+    "source_key": "SERVICIOS:83",
+    "source_row": 83,
+    "code": "",
+    "name": "DEPOSITO SOLIDOS T50",
+    "unit": "",
+    "unit_price": -300.0,
+    "active": true
+  },
+  {
+    "id": 81,
+    "source_key": "SERVICIOS:84",
+    "source_row": 84,
+    "code": "",
+    "name": "GENERADOR GENERGY STELVIO MODIFICADO DRON",
+    "unit": "",
+    "unit_price": 4820.0,
+    "active": true
+  },
+  {
+    "id": 82,
+    "source_key": "SERVICIOS:85",
+    "source_row": 85,
+    "code": "",
+    "name": "Doble bomba profi",
+    "unit": "",
+    "unit_price": 500.0,
+    "active": true
+  },
+  {
+    "id": 83,
+    "source_key": "SERVICIOS:86",
+    "source_row": 86,
+    "code": "",
+    "name": "Montaje cuba dron , bomba enrrollador y pequeño material",
+    "unit": "",
+    "unit_price": 725.0,
+    "active": true
+  },
+  {
+    "id": 84,
+    "source_key": "SERVICIOS:87",
+    "source_row": 87,
+    "code": "",
+    "name": "Brazo difusor DJI T50",
+    "unit": "",
+    "unit_price": 36.0,
+    "active": true
+  },
+  {
+    "id": 85,
+    "source_key": "SERVICIOS:88",
+    "source_row": 88,
+    "code": "",
+    "name": "POWER DISTRIBUTION BOARD MODULE",
+    "unit": "",
+    "unit_price": 337.0,
+    "active": true
+  },
+  {
+    "id": 86,
+    "source_key": "SERVICIOS:89",
+    "source_row": 89,
+    "code": "",
+    "name": "DJI DONGLE II",
+    "unit": "",
+    "unit_price": 149.0,
+    "active": true
+  },
+  {
+    "id": 87,
+    "source_key": "SERVICIOS:90",
+    "source_row": 90,
+    "code": "",
+    "name": "Módulo de válvula solenoide T25/T50",
+    "unit": "",
+    "unit_price": 119.0,
+    "active": true
+  },
+  {
+    "id": 88,
+    "source_key": "SERVICIOS:91",
+    "source_row": 91,
+    "code": "",
+    "name": "DJI T100 USADO , 3 BATERIAS , CARGADOR , ENFRIADOR , 2 BATERIAS MANDO , CARGADOR Y HUB MANDO",
+    "unit": "",
+    "unit_price": 19000.0,
+    "active": true
+  },
+  {
+    "id": 89,
+    "source_key": "SERVICIOS:92",
+    "source_row": 92,
+    "code": "",
+    "name": "HELICE DJI T100",
+    "unit": "",
+    "unit_price": 159.0,
+    "active": true
+  },
+  {
+    "id": 90,
+    "source_key": "SERVICIOS:93",
+    "source_row": 93,
+    "code": "",
+    "name": "DJI AGRAS T70",
+    "unit": "",
+    "unit_price": 6711.0,
+    "active": true
+  },
+  {
+    "id": 91,
+    "source_key": "SERVICIOS:94",
+    "source_row": 94,
+    "code": "",
+    "name": "DJI CABLE AC T-SERIES",
+    "unit": "",
+    "unit_price": 20.0,
+    "active": true
+  },
+  {
+    "id": 92,
+    "source_key": "SERVICIOS:95",
+    "source_row": 95,
+    "code": "",
+    "name": "DEPOSITO DE SOLIDOS DJI T70",
+    "unit": "",
+    "unit_price": 1280.0,
+    "active": true
+  },
+  {
+    "id": 93,
+    "source_key": "SERVICIOS:96",
+    "source_row": 96,
+    "code": "",
+    "name": "DESCUENTO ESPECIAL FERIA",
+    "unit": "",
+    "unit_price": 0,
+    "active": true
+  },
+  {
+    "id": 94,
+    "source_key": "SERVICIOS:97",
+    "source_row": 97,
+    "code": "",
+    "name": "DIFUSORES DOBLES DJI T100",
+    "unit": "",
+    "unit_price": 966.0,
+    "active": true
+  },
+  {
+    "id": 95,
+    "source_key": "SERVICIOS:98",
+    "source_row": 98,
+    "code": "",
+    "name": "JOYSTICK BASCULANTE DJI T50",
+    "unit": "",
+    "unit_price": 127.0,
+    "active": true
+  }
+]
