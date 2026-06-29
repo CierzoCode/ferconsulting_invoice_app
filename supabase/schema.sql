@@ -55,17 +55,26 @@ create table if not exists public.invoices (
   client_city text,
   client_email text,
   payment_method text,
+  delivery_method text,
   subtotal numeric(14,2) not null default 0,
   vat_rate numeric(8,4) not null default 0.21,
   vat_amount numeric(14,2) not null default 0,
   total numeric(14,2) not null default 0,
   status text not null default 'registered',
   notes text,
-  created_at timestamptz not null default now()
+  sent_by text,
+  sent_at timestamptz,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz
 );
 
 create index if not exists invoices_date_idx on public.invoices(invoice_date desc);
 create index if not exists invoices_client_idx on public.invoices(client_name);
+
+alter table public.invoices add column if not exists delivery_method text;
+alter table public.invoices add column if not exists sent_by text;
+alter table public.invoices add column if not exists sent_at timestamptz;
+alter table public.invoices add column if not exists updated_at timestamptz;
 
 create table if not exists public.invoice_items (
   id uuid primary key default gen_random_uuid(),
@@ -103,3 +112,5 @@ begin
   return query select v_sequence, v_prefix || p_year::text || '.' || v_sequence::text;
 end;
 $$;
+
+notify pgrst, 'reload schema';

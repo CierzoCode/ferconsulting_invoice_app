@@ -309,10 +309,23 @@ class SupabaseStore:
         self.url = os.getenv("SUPABASE_URL", "")
         self.key = os.getenv("SUPABASE_SERVICE_ROLE_KEY", os.getenv("SUPABASE_KEY", ""))
         self._client = None
+        self._available: Optional[bool] = None
 
     @property
     def configured(self) -> bool:
         return bool(self.url and self.key)
+
+    def available(self) -> bool:
+        if not self.configured:
+            return False
+        if self._available is not None:
+            return self._available
+        try:
+            self.client().table("invoices").select("id").limit(1).execute()
+            self._available = True
+        except Exception:
+            self._available = False
+        return self._available
 
     def client(self):
         if self._client is None:
@@ -345,13 +358,42 @@ class SupabaseStore:
         result = self.client().table("invoices").select("*").order("created_at", desc=True).limit(50).execute()
         return result.data or []
 
+    def get_invoice(self, invoice_id: str) -> dict[str, Any]:
+        invoice_result = self.client().table("invoices").select("*").eq("id", invoice_id).limit(1).execute()
+        if not invoice_result.data:
+            raise HTTPException(status_code=404, detail="Factura no encontrada.")
+        invoice = invoice_result.data[0]
+        items_result = self.client().table("invoice_items").select("*").eq("invoice_id", invoice_id).order("line_number").execute()
+        invoice["items"] = items_result.data or []
+        return invoice
+
+    def update_invoice(self, invoice_id: str, invoice: dict[str, Any]) -> dict[str, Any]:
+        items = invoice.pop("items")
+        sb = self.client()
+        existing = self.get_invoice(invoice_id)
+        invoice["updated_at"] = datetime.utcnow().isoformat() + "Z"
+        updated = sb.table("invoices").update(invoice).eq("id", invoice_id).execute().data
+        if not updated:
+            raise HTTPException(status_code=404, detail="Factura no encontrada.")
+        sb.table("invoice_items").delete().eq("invoice_id", invoice_id).execute()
+        for item in items:
+            item["invoice_id"] = invoice_id
+        if items:
+            sb.table("invoice_items").insert(items).execute()
+        saved = {**existing, **updated[0], "items": items}
+        return saved
+
 
 local_store = LocalStore()
 supabase_store = SupabaseStore()
 
 
 def active_store():
-    return supabase_store if supabase_store.configured else local_store
+    return supabase_store if supabase_store.available() else local_store
+
+
+def storage_name() -> str:
+    return "supabase" if isinstance(active_store(), SupabaseStore) else "local-json"
 
 
 @app.get("/", response_class=HTMLResponse)
@@ -368,7 +410,7 @@ def bootstrap():
         "services": load_services(),
         "client_prices": load_client_prices(),
         "users": [{k: v for k, v in user.items() if k != "password"} for user in load_users()],
-        "storage": "supabase" if supabase_store.configured else "local-json",
+        "storage": storage_name(),
     }
 
 
@@ -447,8 +489,8 @@ def create_invoice(payload: InvoiceIn):
     saved = store.save_invoice(deepcopy(invoice))
     if isinstance(store, LocalStore):
         store.commit_sequence(reserved["sequence"])
-        update_client_price_history(payload.client, calculations["items"])
-    return {"invoice": saved, "next": next_invoice_preview(), "storage": "supabase" if supabase_store.configured else "local-json"}
+    update_client_price_history(payload.client, calculations["items"])
+    return {"invoice": saved, "next": next_invoice_preview(), "storage": storage_name()}
 
 
 @app.get("/api/invoices")
@@ -458,21 +500,22 @@ def list_invoices():
 
 @app.get("/api/invoices/{invoice_id}")
 def get_invoice(invoice_id: str):
-    if not isinstance(active_store(), LocalStore):
+    if False and not isinstance(active_store(), LocalStore):
         raise HTTPException(status_code=501, detail="La edición detallada solo está implementada en modo local JSON.")
-    return local_store.get_invoice(invoice_id)
+    return active_store().get_invoice(invoice_id)
 
 
 @app.put("/api/invoices/{invoice_id}")
 def update_invoice(invoice_id: str, payload: InvoiceUpdateIn):
-    if not isinstance(active_store(), LocalStore):
+    if False and not isinstance(active_store(), LocalStore):
         raise HTTPException(status_code=501, detail="La edición de facturas solo está implementada en modo local JSON.")
     calculations = calculate_invoice(payload)
     if not payload.client.name.strip():
         raise HTTPException(status_code=400, detail="Selecciona un cliente antes de guardar la factura.")
     if not calculations["items"]:
         raise HTTPException(status_code=400, detail="Añade al menos una línea de factura.")
-    current = local_store.get_invoice(invoice_id)
+    store = active_store()
+    current = store.get_invoice(invoice_id)
     invoice = {
         "invoice_number": current.get("invoice_number"),
         "fiscal_year": payload.fiscal_year,
@@ -498,7 +541,7 @@ def update_invoice(invoice_id: str, payload: InvoiceUpdateIn):
         "updated_at": datetime.utcnow().isoformat() + "Z",
         "items": calculations["items"],
     }
-    saved = local_store.update_invoice(invoice_id, invoice)
+    saved = store.update_invoice(invoice_id, invoice)
     update_client_price_history(payload.client, calculations["items"])
     return {"invoice": saved}
 
@@ -573,4 +616,4 @@ def delete_user(user_id: int):
 
 @app.get("/api/health")
 def health():
-    return {"ok": True, "storage": "supabase" if supabase_store.configured else "local-json"}
+    return {"ok": True, "storage": storage_name(), "supabase_configured": supabase_store.configured}
