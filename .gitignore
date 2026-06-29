@@ -6,3 +6,5 @@ data/local_invoices.json
 data/users.json
 data/client_prices.json
 uvicorn.*.log
+.env
+VERCEL_ENV.md

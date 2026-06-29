@@ -3,6 +3,10 @@ begin;
 
 insert into public.invoice_counters(year, prefix, next_sequence) values (2026, 'FAC-', 140) on conflict (year) do update set prefix = excluded.prefix, next_sequence = excluded.next_sequence, updated_at = now();
 
+insert into public.users(id, username, password, email, role, active) values (1, 'Admin', '1234', 'ferconsulting@asesoragricola.com', 'admin', true) on conflict (username) do update set password=excluded.password, email=excluded.email, role=excluded.role, active=excluded.active, updated_at=now();
+
+insert into public.client_prices(id, client_id, client_name, service_id, service_name, unit, unit_price, updated_at) values (1, 6, 'AMAETON S.L.', 7, 'Servicio de transporte nacional de mercancÃ­as por carretera', 'h', 59.0, '2026-06-22T16:07:13.995502Z') on conflict (id) do update set client_id=excluded.client_id, client_name=excluded.client_name, service_id=excluded.service_id, service_name=excluded.service_name, unit=excluded.unit, unit_price=excluded.unit_price, updated_at=excluded.updated_at;
+
 -- Clientes activos de la hoja CLIENTES. Se conserva id para que coincida con data/clients.json.
 insert into public.clients(id, source_key, source_row, external_code, name, tax_id, address, postal_code, city, email) values (1, 'CLIENTES:2', 2, '4543', 'JOSE JORGE POC MAYORAL', '17761799A', 'CALLE ROSARIO, 40', '50840', 'SAN MATEO DE GALLEGO', NULL) on conflict (source_key) do update set external_code=excluded.external_code, name=excluded.name, tax_id=excluded.tax_id, address=excluded.address, postal_code=excluded.postal_code, city=excluded.city, email=excluded.email, updated_at=now();
 insert into public.clients(id, source_key, source_row, external_code, name, tax_id, address, postal_code, city, email) values (2, 'CLIENTES:3', 3, '4389', 'AGROSERVICIOS ROZAS VILLAGRASA, S.L.', 'B99238693', 'CTRA LA ALMOLDA, S/N', '50177', 'BUJARALOZ', NULL) on conflict (source_key) do update set external_code=excluded.external_code, name=excluded.name, tax_id=excluded.tax_id, address=excluded.address, postal_code=excluded.postal_code, city=excluded.city, email=excluded.email, updated_at=now();

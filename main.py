@@ -119,30 +119,46 @@ def money(value: float) -> float:
     return round(float(value or 0), 2)
 
 
-def load_clients() -> list[dict[str, Any]]:
-    return read_json("clients.json", [])
-
-
-def load_services() -> list[dict[str, Any]]:
-    return read_json("services.json", [])
-
-
-def load_client_prices() -> list[dict[str, Any]]:
-    return read_json("client_prices.json", [])
-
-
-def load_users() -> list[dict[str, Any]]:
-    users = read_json("users.json", [])
-    if users:
-        return users
-    users = [{
+def default_admin_user() -> dict[str, Any]:
+    return {
         "id": 1,
         "username": "Admin",
         "password": "1234",
         "email": SETTINGS.get("company", {}).get("email", ""),
         "role": "admin",
         "active": True,
-    }]
+    }
+
+
+def load_clients() -> list[dict[str, Any]]:
+    store = globals().get("supabase_store")
+    if store and store.available():
+        return store.list_clients()
+    return read_json("clients.json", [])
+
+
+def load_services() -> list[dict[str, Any]]:
+    store = globals().get("supabase_store")
+    if store and store.available():
+        return store.list_services()
+    return read_json("services.json", [])
+
+
+def load_client_prices() -> list[dict[str, Any]]:
+    store = globals().get("supabase_store")
+    if store and store.available():
+        return store.list_client_prices()
+    return read_json("client_prices.json", [])
+
+
+def load_users() -> list[dict[str, Any]]:
+    store = globals().get("supabase_store")
+    if store and store.available():
+        return store.list_users()
+    users = read_json("users.json", [])
+    if users:
+        return users
+    users = [default_admin_user()]
     write_json("users.json", users)
     return users
 
@@ -182,6 +198,10 @@ def same_key(left: Any, right: Any) -> bool:
 
 
 def update_client_price_history(client: ClientSnapshot, items: list[dict[str, Any]]) -> None:
+    store = globals().get("supabase_store")
+    if store and store.available():
+        store.upsert_client_prices(client, items)
+        return
     prices = load_client_prices()
     now = datetime.utcnow().isoformat() + "Z"
     for item in items:
@@ -220,6 +240,10 @@ def update_client_price_history(client: ClientSnapshot, items: list[dict[str, An
 
 
 def next_invoice_preview() -> dict[str, Any]:
+    store = globals().get("supabase_store")
+    if store and store.available():
+        fiscal_year = int(SETTINGS.get("fiscal_year", date.today().year))
+        return store.preview_invoice_number(fiscal_year)
     settings = read_json("settings.json", SETTINGS)
     fiscal_year = int(settings.get("fiscal_year", date.today().year))
     prefix = settings.get("invoice_prefix", "FAC-")
@@ -341,6 +365,114 @@ class SupabaseStore:
         result = self.client().rpc("reserve_invoice_number", {"p_year": fiscal_year, "p_prefix": prefix}).execute()
         data = result.data[0] if isinstance(result.data, list) else result.data
         return {"sequence": int(data["sequence"]), "invoice_number": data["invoice_number"]}
+
+    def preview_invoice_number(self, fiscal_year: int) -> dict[str, Any]:
+        prefix = os.getenv("INVOICE_PREFIX", SETTINGS.get("invoice_prefix", "FAC-"))
+        result = self.client().table("invoice_counters").select("next_sequence,prefix").eq("year", fiscal_year).limit(1).execute()
+        row = (result.data or [{}])[0]
+        sequence = int(row.get("next_sequence") or 1)
+        prefix = row.get("prefix") or prefix
+        return {
+            "fiscal_year": fiscal_year,
+            "prefix": prefix,
+            "sequence": sequence,
+            "invoice_number": f"{prefix}{fiscal_year}.{sequence}",
+        }
+
+    def _list_table(self, table: str, order: str = "id") -> list[dict[str, Any]]:
+        result = self.client().table(table).select("*").order(order).execute()
+        return result.data or []
+
+    def _upsert_table_row(self, table: str, payload: dict[str, Any], row_id: Optional[int] = None) -> dict[str, Any]:
+        clean_payload = deepcopy(payload)
+        if row_id is None:
+            inserted = self.client().table(table).insert(clean_payload).execute().data
+            if not inserted:
+                raise HTTPException(status_code=500, detail="No se ha podido guardar el registro.")
+            return inserted[0]
+        clean_payload["updated_at"] = datetime.utcnow().isoformat() + "Z"
+        updated = self.client().table(table).update(clean_payload).eq("id", row_id).execute().data
+        if not updated:
+            raise HTTPException(status_code=404, detail="Registro no encontrado.")
+        return updated[0]
+
+    def _delete_table_row(self, table: str, row_id: int) -> dict[str, Any]:
+        deleted = self.client().table(table).delete().eq("id", row_id).execute().data
+        if deleted is not None and len(deleted) == 0:
+            raise HTTPException(status_code=404, detail="Registro no encontrado.")
+        return {"ok": True}
+
+    def list_clients(self) -> list[dict[str, Any]]:
+        return self._list_table("clients")
+
+    def list_services(self) -> list[dict[str, Any]]:
+        return self._list_table("services")
+
+    def list_client_prices(self) -> list[dict[str, Any]]:
+        try:
+            return self._list_table("client_prices")
+        except Exception:
+            return read_json("client_prices.json", [])
+
+    def list_users(self) -> list[dict[str, Any]]:
+        try:
+            users = self._list_table("users")
+        except Exception:
+            return read_json("users.json", [default_admin_user()])
+        if users:
+            return users
+        self._upsert_table_row("users", default_admin_user())
+        return self._list_table("users")
+
+    def save_client(self, payload: dict[str, Any], row_id: Optional[int] = None) -> dict[str, Any]:
+        return self._upsert_table_row("clients", payload, row_id)
+
+    def save_service(self, payload: dict[str, Any], row_id: Optional[int] = None) -> dict[str, Any]:
+        return self._upsert_table_row("services", payload, row_id)
+
+    def save_user(self, payload: dict[str, Any], row_id: Optional[int] = None) -> dict[str, Any]:
+        return self._upsert_table_row("users", payload, row_id)
+
+    def delete_client(self, row_id: int) -> dict[str, Any]:
+        return self._delete_table_row("clients", row_id)
+
+    def delete_service(self, row_id: int) -> dict[str, Any]:
+        return self._delete_table_row("services", row_id)
+
+    def delete_user(self, row_id: int) -> dict[str, Any]:
+        return self._delete_table_row("users", row_id)
+
+    def upsert_client_prices(self, client: ClientSnapshot, items: list[dict[str, Any]]) -> None:
+        try:
+            now = datetime.utcnow().isoformat() + "Z"
+            for item in items:
+                if not item.get("description") or float(item.get("unit_price") or 0) <= 0:
+                    continue
+                query = self.client().table("client_prices").select("*").limit(1)
+                if client.id is not None:
+                    query = query.eq("client_id", client.id)
+                else:
+                    query = query.eq("client_name", client.name)
+                if item.get("service_id") is not None:
+                    query = query.eq("service_id", item.get("service_id"))
+                else:
+                    query = query.eq("service_name", item.get("description"))
+                existing = query.execute().data or []
+                payload = {
+                    "client_id": client.id,
+                    "client_name": client.name,
+                    "service_id": item.get("service_id"),
+                    "service_name": item.get("description"),
+                    "unit": item.get("unit", ""),
+                    "unit_price": money(item.get("unit_price") or 0),
+                    "updated_at": now,
+                }
+                if existing:
+                    self.client().table("client_prices").update(payload).eq("id", existing[0]["id"]).execute()
+                else:
+                    self.client().table("client_prices").insert(payload).execute()
+        except Exception:
+            pass
 
     def save_invoice(self, invoice: dict[str, Any]) -> dict[str, Any]:
         items = invoice.pop("items")
@@ -560,31 +692,47 @@ def config():
 
 @app.post("/api/config/clients")
 def create_client(payload: ClientIn):
-    return upsert_json_row("clients.json", payload.model_dump(exclude_none=True))
+    data = payload.model_dump(exclude_none=True)
+    if supabase_store.available():
+        return supabase_store.save_client(data)
+    return upsert_json_row("clients.json", data)
 
 
 @app.put("/api/config/clients/{client_id}")
 def update_client(client_id: int, payload: ClientIn):
-    return upsert_json_row("clients.json", payload.model_dump(exclude_none=True), client_id)
+    data = payload.model_dump(exclude_none=True)
+    if supabase_store.available():
+        return supabase_store.save_client(data, client_id)
+    return upsert_json_row("clients.json", data, client_id)
 
 
 @app.delete("/api/config/clients/{client_id}")
 def delete_client(client_id: int):
+    if supabase_store.available():
+        return supabase_store.delete_client(client_id)
     return delete_json_row("clients.json", client_id)
 
 
 @app.post("/api/config/services")
 def create_service(payload: ServiceIn):
-    return upsert_json_row("services.json", payload.model_dump(exclude_none=True))
+    data = payload.model_dump(exclude_none=True)
+    if supabase_store.available():
+        return supabase_store.save_service(data)
+    return upsert_json_row("services.json", data)
 
 
 @app.put("/api/config/services/{service_id}")
 def update_service(service_id: int, payload: ServiceIn):
-    return upsert_json_row("services.json", payload.model_dump(exclude_none=True), service_id)
+    data = payload.model_dump(exclude_none=True)
+    if supabase_store.available():
+        return supabase_store.save_service(data, service_id)
+    return upsert_json_row("services.json", data, service_id)
 
 
 @app.delete("/api/config/services/{service_id}")
 def delete_service(service_id: int):
+    if supabase_store.available():
+        return supabase_store.delete_service(service_id)
     return delete_json_row("services.json", service_id)
 
 
@@ -593,7 +741,10 @@ def create_user(payload: UserIn):
     user = payload.model_dump(exclude_none=True)
     if not user.get("password"):
         user["password"] = "1234"
-    saved = upsert_json_row("users.json", user)
+    if supabase_store.available():
+        saved = supabase_store.save_user(user)
+    else:
+        saved = upsert_json_row("users.json", user)
     return {k: v for k, v in saved.items() if k != "password"}
 
 
@@ -605,12 +756,17 @@ def update_user(user_id: int, payload: UserIn):
     user = payload.model_dump(exclude_none=True)
     if not user.get("password"):
         user["password"] = current.get("password", "1234")
-    saved = upsert_json_row("users.json", user, user_id)
+    if supabase_store.available():
+        saved = supabase_store.save_user(user, user_id)
+    else:
+        saved = upsert_json_row("users.json", user, user_id)
     return {k: v for k, v in saved.items() if k != "password"}
 
 
 @app.delete("/api/config/users/{user_id}")
 def delete_user(user_id: int):
+    if supabase_store.available():
+        return supabase_store.delete_user(user_id)
     return delete_json_row("users.json", user_id)
 
 

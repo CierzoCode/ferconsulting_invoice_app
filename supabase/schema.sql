@@ -41,6 +41,30 @@ create table if not exists public.services (
 
 create index if not exists services_name_idx on public.services using gin (to_tsvector('simple', coalesce(name,'') || ' ' || coalesce(unit,'')));
 
+create table if not exists public.users (
+  id bigserial primary key,
+  username text not null unique,
+  password text not null,
+  email text,
+  role text not null default 'admin',
+  active boolean not null default true,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create table if not exists public.client_prices (
+  id bigserial primary key,
+  client_id bigint references public.clients(id) on delete cascade,
+  client_name text,
+  service_id bigint references public.services(id) on delete cascade,
+  service_name text,
+  unit text,
+  unit_price numeric(14,4) not null default 0,
+  updated_at timestamptz not null default now()
+);
+
+create index if not exists client_prices_client_idx on public.client_prices(client_id, service_id);
+
 create table if not exists public.invoices (
   id uuid primary key default gen_random_uuid(),
   invoice_number text not null unique,
