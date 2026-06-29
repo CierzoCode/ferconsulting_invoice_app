@@ -20,6 +20,7 @@ const state = {
 const fmtMoney = new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR' });
 const fmtDate = new Intl.DateTimeFormat('es-ES');
 const qs = (s) => document.querySelector(s);
+const urlParams = new URLSearchParams(window.location.search);
 
 function toast(message) {
   const el = qs('#toast');
@@ -77,6 +78,11 @@ function parseVoiceNumber(text) {
     once: 11, doce: 12, trece: 13, catorce: 14, quince: 15, veinte: 20, treinta: 30, cuarenta: 40, cincuenta: 50,
   };
   return words[cleaned] || 0;
+}
+
+function formatDiscountInputValue(rate) {
+  const pct = Number(rate || 0) * 100;
+  return pct > 0 ? String(pct) : '';
 }
 
 function recommendedPriceFor(service) {
@@ -336,6 +342,8 @@ function setView(name) {
   qs('#configView').classList.toggle('active', name === 'config');
   qs('#printBtn').style.display = name === 'invoice' ? '' : 'none';
   qs('#registerBtn').style.display = name === 'invoice' ? '' : 'none';
+  qs('#invoiceViewBtn').classList.toggle('active', name === 'invoice');
+  qs('#configViewBtn').classList.toggle('active', name === 'config');
   if (name === 'config') loadConfig();
 }
 
@@ -351,7 +359,7 @@ function createRow(index) {
     <td><input class="service-input" list="serviceOptions" aria-label="Servicio linea ${index}"></td>
     <td><span class="readonly-cell unit-cell"></span></td>
     <td><input class="price-input" type="number" min="0" step="0.0001" inputmode="decimal" aria-label="Precio linea ${index}"></td>
-    <td><input class="discount-input" type="number" min="0" max="100" step="0.01" inputmode="decimal" aria-label="Descuento linea ${index}" placeholder="0%"></td>
+    <td><input class="discount-input" type="number" min="0" max="100" step="0.01" inputmode="decimal" aria-label="Descuento linea ${index}"></td>
     <td><span class="readonly-cell amount-cell">-</span></td>`;
   return tr;
 }
@@ -377,6 +385,9 @@ function addLine() {
 function onTableInput(event) {
   const row = event.target.closest('tr');
   if (!row) return;
+  if (event.target.classList.contains('discount-input') && Number(event.target.value || 0) === 0) {
+    event.target.value = '';
+  }
   const serviceInput = row.querySelector('.service-input');
   const service = serviceByName(serviceInput.value);
   if (service && event.target.classList.contains('service-input')) {
@@ -545,7 +556,7 @@ async function loadInvoiceIntoForm(invoiceId) {
     row.querySelector('.service-input').value = item.description || '';
     row.querySelector('.unit-cell').textContent = item.unit || '';
     row.querySelector('.price-input').value = item.unit_price || '';
-    row.querySelector('.discount-input').value = Number(item.discount_rate || 0) * 100;
+    row.querySelector('.discount-input').value = formatDiscountInputValue(item.discount_rate);
   });
   selectClientByInput();
   updatePrintTexts();
@@ -747,6 +758,15 @@ function applySession() {
   qs('#sessionUser').textContent = logged ? `- ${state.currentUser.username} (${state.currentUser.email || 'sin email'})` : '';
 }
 
+function applyDebugFlags() {
+  if (urlParams.get('debugAddressBox') === '1') {
+    document.body.classList.add('debug-address-box');
+  }
+  if (urlParams.get('debugLayout') === '1') {
+    document.body.classList.add('debug-layout');
+  }
+}
+
 async function init() {
   renderRows();
   const data = await api('/api/bootstrap');
@@ -763,6 +783,7 @@ async function init() {
   qs('#invoicePrefixText').textContent = `${state.settings.invoice_prefix || 'FAC-'}${state.settings.fiscal_year || new Date().getFullYear()}.`;
   qs('#paymentMethodInput').value = state.settings.default_payment_method || qs('#paymentMethodInput').value;
   updatePrintTexts();
+  applyDebugFlags();
   qs('#loginForm').addEventListener('submit', handleLogin);
   qs('#logoutBtn').addEventListener('click', () => {
     state.currentUser = null;

@@ -20,61 +20,45 @@
 
   <div class="app-shell">
     <header class="toolbar no-print">
-      <div>
+      <div class="toolbar-main">
         <p class="eyebrow">Factura Ferconsulting 2026</p>
         <h1>Generador de facturas</h1>
         <p class="muted"><span id="storageMode">Cargando datos...</span> <span id="sessionUser"></span></p>
       </div>
-      <div class="toolbar-actions">
-        <button class="btn secondary" id="invoiceViewBtn" type="button">Factura</button>
+      <nav class="toolbar-actions global-nav" aria-label="Navegacion principal">
+        <button class="btn secondary active" id="invoiceViewBtn" type="button">Factura</button>
         <button class="btn secondary" id="configViewBtn" type="button">Configuracion</button>
-        <button class="btn secondary" id="voiceBtn" type="button">Voz</button>
-        <button class="btn secondary" id="printBtn" type="button">1 Crear PDF</button>
-        <button class="btn primary" id="registerBtn" type="button">2 Registrar factura</button>
         <button class="btn secondary" id="logoutBtn" type="button">Salir</button>
-      </div>
+      </nav>
     </header>
 
     <main class="layout app-view active" id="invoiceView">
       <section class="invoice-card" id="invoicePrintable">
         <div class="invoice-actions no-print">
-          <button class="link-btn" id="clearBtn" type="button">Limpiar formulario</button>
-          <button class="link-btn" id="addLineBtn" type="button">Anadir linea</button>
+          <div class="screen-actions-left">
+            <button class="link-btn" id="clearBtn" type="button">Limpiar formulario</button>
+            <button class="link-btn" id="addLineBtn" type="button">Anadir linea</button>
+            <button class="btn secondary compact" id="voiceBtn" type="button">Voz</button>
+          </div>
+          <div class="screen-actions-right">
+            <button class="btn secondary compact" id="printBtn" type="button">Crear PDF</button>
+            <button class="btn primary compact" id="registerBtn" type="button">Registrar factura</button>
+          </div>
         </div>
 
         <div class="invoice-header">
           <div class="logo-block">
             <img src="{{ url_for('static', path='/img/ferconsulting_logo.png') }}" alt="Ferconsulting" />
           </div>
-          <div class="invoice-title">
-            <h2>Factura</h2>
-            <div class="meta-grid">
-              <span>Fecha</span><strong id="invoiceDateText"></strong>
-              <span>Numero</span><strong><span id="invoicePrefixText">FAC-2026.</span><input id="sequenceInput" class="inline-number no-print" type="number" min="1" readonly /><span class="print-only" id="sequencePrint"></span></strong>
-            </div>
-          </div>
         </div>
 
-        <section class="customer-grid">
-          <label>Cliente:</label>
-          <div>
-            <input id="clientInput" list="clientOptions" placeholder="Selecciona o escribe un cliente" autocomplete="off" />
-            <datalist id="clientOptions"></datalist>
+        <div class="invoice-title invoice-meta">
+          <h2 class="title">Factura</h2>
+          <div class="meta-grid">
+            <span class="label">Fecha</span><strong class="value" id="invoiceDateText"></strong>
+            <span class="label">Numero</span><strong class="value"><span id="invoicePrefixText">FAC-2026.</span><input id="sequenceInput" class="inline-number no-print" type="number" min="1" readonly /><span class="print-only" id="sequencePrint"></span></strong>
           </div>
-          <label>C.I.F.:</label><output id="clientTaxId"></output>
-          <label>Direccion:</label><output id="clientAddress"></output>
-          <label>C.P. / Ciudad:</label><output id="clientCity"></output>
-          <label>Pago:</label>
-          <select id="paymentMethodInput">
-            <option value="TRANSFERENCIA ES15 2100 3586 5022 0012 1937 LA CAIXA">Transferencia</option>
-            <option value="GIRO">Giro</option>
-          </select>
-          <label>Envio:</label>
-          <select id="deliveryMethodInput">
-            <option value="email">Email</option>
-            <option value="postal">Correo postal</option>
-          </select>
-        </section>
+        </div>
 
         <section class="postal-window">
           <span>Ventana sobre</span>
@@ -82,31 +66,55 @@
           <p id="windowAddress">Direccion</p>
           <p id="windowCity">C.P. Ciudad</p>
         </section>
+        <div class="invoice-content">
+          <section class="customer-grid">
+            <label>Cliente:</label>
+            <div>
+              <input id="clientInput" list="clientOptions" placeholder="Selecciona o escribe un cliente" autocomplete="off" />
+              <datalist id="clientOptions"></datalist>
+            </div>
+            <label>C.I.F.:</label><output id="clientTaxId"></output>
+            <label>Direccion:</label><output id="clientAddress"></output>
+            <label>C.P. / Ciudad:</label><output id="clientCity"></output>
+            <label>Pago:</label>
+            <select id="paymentMethodInput">
+              <option value="TRANSFERENCIA ES15 2100 3586 5022 0012 1937 LA CAIXA">Transferencia</option>
+              <option value="GIRO">Giro</option>
+            </select>
+            <label>Envio:</label>
+            <select id="deliveryMethodInput">
+              <option value="email">Email</option>
+              <option value="postal">Correo postal</option>
+            </select>
+          </section>
 
-        <table class="invoice-table">
-          <thead>
-            <tr>
-              <th class="qty">Cantidad</th>
-              <th>Servicio</th>
-              <th class="unit">Unidad</th>
-              <th class="price">Precio</th>
-              <th class="discount">Descuento</th>
-              <th class="amount">Importe</th>
-            </tr>
-          </thead>
-          <tbody id="lineItems"></tbody>
-        </table>
-        <datalist id="serviceOptions"></datalist>
+          <div class="invoice-table-wrap">
+            <table class="invoice-table">
+              <thead>
+                <tr>
+                  <th class="qty">Cantidad</th>
+                  <th>Servicio</th>
+                  <th class="unit">Unidad</th>
+                  <th class="price">Precio</th>
+                  <th class="discount">Descuento</th>
+                  <th class="amount">Importe</th>
+                </tr>
+              </thead>
+              <tbody id="lineItems"></tbody>
+            </table>
+          </div>
+          <datalist id="serviceOptions"></datalist>
 
-        <label class="notes-block">
-          Conceptos / comentarios
-          <textarea id="notesInput" rows="4" placeholder="Anade conceptos, comentarios o instrucciones que deban aparecer en la factura."></textarea>
-        </label>
+          <label class="notes-block">
+            Conceptos / comentarios
+            <textarea id="notesInput" rows="4" placeholder="Anade conceptos, comentarios o instrucciones que deban aparecer en la factura."></textarea>
+          </label>
 
-        <div class="totals">
-          <div><span>Subtotal</span><strong id="subtotalText">0,00 EUR</strong></div>
-          <div><span>I.V.A. 21%</span><strong id="vatText">0,00 EUR</strong></div>
-          <div class="grand"><span>Total</span><strong id="totalText">0,00 EUR</strong></div>
+          <div class="totals">
+            <div><span>Subtotal</span><strong id="subtotalText">0,00 EUR</strong></div>
+            <div><span>I.V.A. 21%</span><strong id="vatText">0,00 EUR</strong></div>
+            <div class="grand"><span>Total</span><strong id="totalText">0,00 EUR</strong></div>
+          </div>
         </div>
 
         <div class="payment-block">

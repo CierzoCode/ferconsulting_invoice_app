@@ -2290,5 +2290,15 @@
     "postal_code": "50100",
     "city": "ALMUNIA DE DOÑA GODINA, LA",
     "email": ""
+  },
+  {
+    "external_code": "",
+    "name": "Jorge Cortés",
+    "tax_id": "",
+    "address": "Calle De García Gómez 3, 3º",
+    "postal_code": "50290",
+    "city": "Épila",
+    "email": "info.cierzocode@gmail.com",
+    "id": 192
   }
 ]
