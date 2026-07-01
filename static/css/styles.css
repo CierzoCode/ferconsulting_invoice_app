@@ -200,7 +200,7 @@ dt { color: var(--muted); } dd { margin: 0; font-weight: 800; text-align: right;
   }
   @page { size: A4 portrait; margin: 0; }
   html, body { width: var(--print-page-w); height: var(--print-page-h); }
-  body { background: white; color: #111; font-size: 10px; }
+  body { background: white; color: #111; font-size: 10.5px; }
   .no-print, .toolbar, .side-panel, .toast { display: none !important; }
   .app-shell { padding: 0; max-width: none; }
   .layout { display: block; }
@@ -253,14 +253,14 @@ dt { color: var(--muted); } dd { margin: 0; font-weight: 800; text-align: right;
     display: grid !important;
     gap: 1pt;
     color: #87918a !important;
-    font-size: 6.8pt;
+    font-size: 7.4pt;
     line-height: 1.12;
     text-align: right;
     align-content: center;
     height: var(--header-h);
     overflow: hidden;
   }
-  .company-header-info strong { color: #87918a !important; font-size: 7.5pt; }
+  .company-header-info strong { color: #87918a !important; font-size: 8.1pt; }
   .invoice-meta,
   .invoice-title {
     display: block !important;
@@ -283,7 +283,7 @@ dt { color: var(--muted); } dd { margin: 0; font-weight: 800; text-align: right;
   .invoice-title h2 {
     display: block !important;
     margin: 0 0 12pt 0 !important;
-    font-size: 14pt !important;
+    font-size: 15pt !important;
     font-weight: 700 !important;
     color: #000 !important;
     line-height: 1.1;
@@ -297,7 +297,7 @@ dt { color: var(--muted); } dd { margin: 0; font-weight: 800; text-align: right;
     column-gap: 8pt;
     row-gap: 4pt;
     margin-bottom: 4pt;
-    font-size: 7.5pt;
+    font-size: 8.4pt;
     line-height: 1.2;
     color: #000 !important;
     text-align: left;
@@ -350,11 +350,11 @@ dt { color: var(--muted); } dd { margin: 0; font-weight: 800; text-align: right;
     grid-template-columns: 18mm 1fr 18mm 1fr;
     gap: 1.5mm 3mm;
     margin: 0 0 6pt;
-    font-size: 9px;
+    font-size: 10pt;
     align-items: start;
   }
-  .customer-grid label { font-size: 8.5px; color: #555; }
-  .customer-grid input, .customer-grid select, .customer-grid output { font-size: 9px; line-height: 1.2; min-height: 0; }
+  .customer-grid label { font-size: 9.2pt; color: #555; }
+  .customer-grid input, .customer-grid select, .customer-grid output { font-size: 9.5pt; line-height: 1.18; min-height: 0; }
   .invoice-table {
     width: 100%;
     min-width: 0;
@@ -362,7 +362,7 @@ dt { color: var(--muted); } dd { margin: 0; font-weight: 800; text-align: right;
     height: var(--table-min-height);
     min-height: var(--table-min-height);
     max-height: var(--table-min-height);
-    font-size: 8pt;
+    font-size: 9pt;
     border-collapse: collapse;
     table-layout: fixed;
     border: 1px solid #111;
@@ -371,7 +371,7 @@ dt { color: var(--muted); } dd { margin: 0; font-weight: 800; text-align: right;
     print-color-adjust: exact;
     -webkit-print-color-adjust: exact;
     padding: 3pt 4pt;
-    font-size: 7.5pt;
+    font-size: 8.3pt;
     letter-spacing: 0;
     border-right: 1px solid rgba(255,255,255,.28);
     border-bottom: 1px solid #111;
@@ -388,21 +388,21 @@ dt { color: var(--muted); } dd { margin: 0; font-weight: 800; text-align: right;
   }
   .invoice-table td:last-child { border-right: 0; }
   .invoice-table input { padding: 0; }
-  .readonly-cell { padding: 0; min-height: 0; line-height: 1.25; }
+  .readonly-cell { padding: 0; min-height: 0; line-height: 1.18; }
   .qty { width: 17mm; }.unit { width: 16mm; }.price { width: 20mm; }.discount { width: 18mm; }.amount { width: 22mm; }
-  .notes-block { margin-top: 6pt; border-top: 1px solid var(--line); padding-top: 4pt; font-size: 8.5px; }
-  .notes-block textarea { min-height: 52pt; max-height: 52pt; overflow: hidden; font-size: 8.5pt; line-height: 1.2; }
+  .notes-block { margin-top: 6pt; border-top: 1px solid var(--line); padding-top: 4pt; font-size: 9pt; }
+  .notes-block textarea { min-height: 52pt; max-height: 52pt; overflow: hidden; font-size: 9.2pt; line-height: 1.16; }
   .totals {
     position: absolute;
     right: 0;
     top: 338pt;
     width: 165pt;
     margin: 0;
-    font-size: 8.5pt;
+    font-size: 9.5pt;
     border-radius: 0;
   }
   .totals div { padding: 3pt 5pt; }
-  .totals .grand { font-size: 12px; }
+  .totals .grand { font-size: 10.5pt; }
   .payment-block {
     position: absolute;
     left: var(--page-margin-x);
@@ -410,7 +410,7 @@ dt { color: var(--muted); } dd { margin: 0; font-weight: 800; text-align: right;
     width: var(--footer-w);
     height: var(--payment-h);
     margin: 0;
-    font-size: 7.5pt;
+    font-size: 8.5pt;
     line-height: 1.35;
     overflow: hidden;
   }
@@ -431,7 +431,7 @@ dt { color: var(--muted); } dd { margin: 0; font-weight: 800; text-align: right;
     grid-template-rows: 11pt 1fr 12pt;
     column-gap: 8pt;
     row-gap: 3pt;
-    font-size: 5.2pt;
+    font-size: 5.8pt;
     line-height: 1.15;
     border-top: .5pt solid #999;
     overflow: hidden;
@@ -453,7 +453,7 @@ dt { color: var(--muted); } dd { margin: 0; font-weight: 800; text-align: right;
     grid-row: 1;
     margin: 0;
     padding: 0;
-    font-size: 4.8pt;
+    font-size: 5.2pt;
     line-height: 1.15;
     overflow: hidden;
   }
@@ -462,7 +462,7 @@ dt { color: var(--muted); } dd { margin: 0; font-weight: 800; text-align: right;
     grid-row: 2;
     margin: 0;
     padding: 0;
-    font-size: 4.7pt;
+    font-size: 5.1pt;
     line-height: 1.12;
   }
   .invoice-footer .company-line {
@@ -472,7 +472,7 @@ dt { color: var(--muted); } dd { margin: 0; font-weight: 800; text-align: right;
     margin: 2pt 0 0;
     padding-top: 2pt;
     border-top: .5pt solid #aaa;
-    font-size: 5pt;
+    font-size: 5.4pt;
     font-weight: 700;
     line-height: 1.15;
   }

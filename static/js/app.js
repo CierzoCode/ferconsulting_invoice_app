@@ -334,7 +334,13 @@ async function api(path, options = {}) {
     headers: { 'Content-Type': 'application/json', ...(options.headers || {}) },
   });
   const data = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(data.detail || 'Operacion no completada');
+  if (!res.ok) {
+    const detail = data.detail;
+    const message = Array.isArray(detail)
+      ? detail.map(err => `${(err.loc || []).join('.')}: ${err.msg}`).join(' | ')
+      : (typeof detail === 'string' ? detail : JSON.stringify(detail || data));
+    throw new Error(message || 'Operacion no completada');
+  }
   return data;
 }
 
@@ -472,7 +478,7 @@ function collectPayload(status = 'pendiente_envio') {
       });
     }
   });
-  return {
+  const payload = {
     invoice_type: qs('#invoiceTypeInput').value,
     invoice_date: todayISO(),
     fiscal_year: Number(state.settings.fiscal_year || new Date().getFullYear()),
@@ -482,10 +488,13 @@ function collectPayload(status = 'pendiente_envio') {
     payment_method: qs('#paymentMethodInput').value,
     delivery_method: qs('#deliveryMethodInput').value,
     notes: qs('#notesInput').value.trim(),
-    status: state.editingInvoiceStatus || (qs('#invoiceTypeInput').value === 'proforma' ? 'proforma' : status),
-    sent_by: '',
-    sent_at: '',
   };
+  if (state.editingInvoiceId) {
+    payload.status = state.editingInvoiceStatus || (qs('#invoiceTypeInput').value === 'proforma' ? 'proforma' : status);
+    payload.sent_by = '';
+    payload.sent_at = '';
+  }
+  return payload;
 }
 
 async function registerInvoice() {

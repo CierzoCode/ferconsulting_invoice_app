@@ -12,7 +12,7 @@ from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 try:
     from dotenv import load_dotenv
@@ -67,6 +67,8 @@ class ClientSnapshot(BaseModel):
 
 
 class InvoiceIn(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+
     invoice_type: str = "invoice"
     invoice_date: Optional[date] = None
     fiscal_year: int = int(SETTINGS.get("fiscal_year", date.today().year))
