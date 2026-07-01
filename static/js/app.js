@@ -53,6 +53,42 @@ function clientByName(name) {
   return state.clients.find(c => normalize(c.name) === n) || null;
 }
 
+function cleanString(value) {
+  return value == null ? '' : String(value).trim();
+}
+
+function clientHasEmail(client = state.selectedClient) {
+  return Boolean(cleanString(client?.email));
+}
+
+function clientForPayload() {
+  const client = state.selectedClient || {};
+  return {
+    id: client.id ?? null,
+    external_code: cleanString(client.external_code),
+    name: cleanString(client.name || qs('#clientInput').value),
+    tax_id: cleanString(client.tax_id),
+    address: cleanString(client.address),
+    postal_code: cleanString(client.postal_code),
+    city: cleanString(client.city),
+    email: cleanString(client.email),
+    default_payment_method: cleanString(client.default_payment_method),
+    default_delivery_method: cleanString(client.default_delivery_method),
+  };
+}
+
+function updateDeliveryEmailAvailability() {
+  const deliverySelect = qs('#deliveryMethodInput');
+  const emailOption = deliverySelect?.querySelector('option[value="email"]');
+  if (!deliverySelect || !emailOption) return;
+  const canUseEmail = clientHasEmail();
+  emailOption.disabled = !canUseEmail;
+  emailOption.title = canUseEmail ? '' : 'Anade un email al cliente para poder enviar por email';
+  if (!canUseEmail && deliverySelect.value === 'email') {
+    deliverySelect.value = 'postal';
+  }
+}
+
 function bestMatch(rows, text, fields) {
   const query = normalize(text);
   if (!query) return null;
@@ -430,11 +466,17 @@ function calculateTotals() {
 }
 
 function updatePrintTexts() {
+  updateDeliveryEmailAvailability();
+  syncNotesPrintState();
   const payment = qs('#paymentMethodInput').value;
   const delivery = qs('#deliveryMethodInput').value === 'postal' ? 'Correo postal' : 'Email';
   qs('#paymentMethodText').textContent = payment;
   qs('#deliveryMethodText').textContent = delivery;
   qs('.invoice-meta .title').textContent = qs('#invoiceTypeInput').value === 'proforma' ? 'Proforma' : 'Factura';
+}
+
+function syncNotesPrintState() {
+  qs('.notes-block')?.classList.toggle('print-empty-notes', !qs('#notesInput')?.value.trim());
 }
 
 function selectClientByInput() {
@@ -451,6 +493,7 @@ function selectClientByInput() {
   qs('#windowCity').textContent = cityLine || 'C.P. Ciudad';
   if (client?.default_payment_method) qs('#paymentMethodInput').value = client.default_payment_method;
   if (client?.default_delivery_method) qs('#deliveryMethodInput').value = client.default_delivery_method;
+  updateDeliveryEmailAvailability();
   updatePrintTexts();
   document.querySelectorAll('#lineItems tr').forEach(row => {
     const service = serviceByName(row.querySelector('.service-input').value);
@@ -482,7 +525,7 @@ function collectPayload(status = 'pendiente_envio') {
     invoice_type: qs('#invoiceTypeInput').value,
     invoice_date: todayISO(),
     fiscal_year: Number(state.settings.fiscal_year || new Date().getFullYear()),
-    client: state.selectedClient || { name: qs('#clientInput').value.trim() },
+    client: clientForPayload(),
     items: rows,
     vat_rate: Number(qs('#vatRateInput').value || 0.21),
     payment_method: qs('#paymentMethodInput').value,
@@ -502,6 +545,7 @@ async function registerInvoice() {
   updatePrintTexts();
   const payload = collectPayload();
   if (!payload.client?.name) return toast('Selecciona un cliente antes de registrar.');
+  if (payload.delivery_method === 'email' && !payload.client.email) return toast('Este cliente no tiene email. Anadelo en Configuracion > Clientes o usa correo postal.');
   if (!payload.items.length) return toast('Anade al menos una linea de factura.');
   const btn = qs('#registerBtn');
   btn.disabled = true;
@@ -719,6 +763,11 @@ async function saveInvoiceCounter(event) {
 async function saveClient(event) {
   event.preventDefault();
   const id = qs('#clientIdEdit').value;
+  const email = qs('#clientEmailEdit').value.trim();
+  const defaultDeliveryMethod = qs('#clientDeliveryEdit').value;
+  if (defaultDeliveryMethod === 'email' && !email) {
+    return toast('Anade un email al cliente antes de guardar Email como envio por defecto.');
+  }
   const payload = {
     external_code: qs('#clientCodeEdit').value.trim(),
     name: qs('#clientNameEdit').value.trim(),
@@ -726,9 +775,9 @@ async function saveClient(event) {
     address: qs('#clientAddressEdit').value.trim(),
     postal_code: qs('#clientPostalEdit').value.trim(),
     city: qs('#clientCityEdit').value.trim(),
-    email: qs('#clientEmailEdit').value.trim(),
+    email,
     default_payment_method: qs('#clientPaymentEdit').value,
-    default_delivery_method: qs('#clientDeliveryEdit').value,
+    default_delivery_method: defaultDeliveryMethod,
   };
   await api(id ? `/api/config/clients/${id}` : '/api/config/clients', { method: id ? 'PUT' : 'POST', body: JSON.stringify(payload) });
   toast('Cliente guardado.');
@@ -904,6 +953,7 @@ async function init() {
   qs('#clientInput').addEventListener('input', selectClientByInput);
   qs('#paymentMethodInput').addEventListener('change', updatePrintTexts);
   qs('#deliveryMethodInput').addEventListener('change', updatePrintTexts);
+  qs('#notesInput').addEventListener('input', syncNotesPrintState);
   qs('#invoiceTypeInput').addEventListener('change', updateInvoiceNumberDisplay);
   qs('#vatRateInput').addEventListener('change', calculateTotals);
   qs('#sequenceInput').addEventListener('input', () => qs('#sequencePrint').textContent = qs('#sequenceInput').value);
@@ -919,8 +969,13 @@ async function init() {
   qs('#newClientBtn').addEventListener('click', clearClientForm);
   qs('#newServiceBtn').addEventListener('click', clearServiceForm);
   qs('#newUserBtn').addEventListener('click', clearUserForm);
+  window.addEventListener('beforeprint', () => {
+    updatePrintTexts();
+    syncNotesPrintState();
+  });
   bindConfigActions();
   applySession();
+  syncNotesPrintState();
   calculateTotals();
   loadLastInvoices();
 }

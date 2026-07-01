@@ -392,6 +392,7 @@ dt { color: var(--muted); } dd { margin: 0; font-weight: 800; text-align: right;
   .qty { width: 17mm; }.unit { width: 16mm; }.price { width: 20mm; }.discount { width: 18mm; }.amount { width: 22mm; }
   .notes-block { margin-top: 6pt; border-top: 1px solid var(--line); padding-top: 4pt; font-size: 9pt; }
   .notes-block textarea { min-height: 52pt; max-height: 52pt; overflow: hidden; font-size: 9.2pt; line-height: 1.16; }
+  .notes-block.print-empty-notes { visibility: hidden; }
   .totals {
     position: absolute;
     right: 0;

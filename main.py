@@ -12,7 +12,7 @@ from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 try:
     from dotenv import load_dotenv
@@ -65,6 +65,21 @@ class ClientSnapshot(BaseModel):
     default_payment_method: str = ""
     default_delivery_method: str = ""
 
+    @field_validator(
+        "name",
+        "tax_id",
+        "address",
+        "postal_code",
+        "city",
+        "email",
+        "default_payment_method",
+        "default_delivery_method",
+        mode="before",
+    )
+    @classmethod
+    def empty_if_none(cls, value):
+        return "" if value is None else value
+
 
 class InvoiceIn(BaseModel):
     model_config = ConfigDict(extra="ignore")
@@ -96,6 +111,21 @@ class ClientIn(BaseModel):
     email: str = ""
     default_payment_method: str = ""
     default_delivery_method: str = ""
+
+    @field_validator(
+        "external_code",
+        "tax_id",
+        "address",
+        "postal_code",
+        "city",
+        "email",
+        "default_payment_method",
+        "default_delivery_method",
+        mode="before",
+    )
+    @classmethod
+    def empty_if_none(cls, value):
+        return "" if value is None else value
 
 
 class ServiceIn(BaseModel):
