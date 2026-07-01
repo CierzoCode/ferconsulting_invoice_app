@@ -189,8 +189,8 @@ dt { color: var(--muted); } dd { margin: 0; font-weight: 800; text-align: right;
     --invoice-meta-x: 50pt;
     --invoice-meta-top: 125pt;
     --invoice-meta-w: 210pt;
-    --invoice-content-top: 210pt;
-    --table-min-height: 225pt;
+    --invoice-content-top: 235pt;
+    --table-min-height: 200pt;
     --payment-top: 610pt;
     --payment-h: 42pt;
     --footer-x: 24pt;
@@ -228,7 +228,7 @@ dt { color: var(--muted); } dd { margin: 0; font-weight: 800; text-align: right;
     align-items: center;
     justify-content: stretch;
     padding: 0;
-    background: var(--brand-green) !important;
+    background: transparent !important;
     border: 0;
     border-bottom: 1px solid var(--brand-green);
     overflow: hidden;
@@ -239,20 +239,20 @@ dt { color: var(--muted); } dd { margin: 0; font-weight: 800; text-align: right;
     width: 230pt;
     height: var(--header-h);
     min-height: var(--header-h);
-    padding: 5pt 12pt;
+    padding: 0;
     border-radius: 0;
-    background: transparent !important;
+    background: var(--brand-green) !important;
     display: flex;
     align-items: center;
     justify-content: center;
     print-color-adjust: exact;
     -webkit-print-color-adjust: exact;
   }
-  .logo-block img { max-height: 44pt; width: auto; max-width: 100%; border-radius: 0; display: block; }
+  .logo-block img { max-height: 38pt; width: auto; max-width: 100%; border-radius: 0; display: block; margin: auto; }
   .company-header-info {
     display: grid !important;
     gap: 1pt;
-    color: #fff !important;
+    color: #87918a !important;
     font-size: 6.8pt;
     line-height: 1.12;
     text-align: right;
@@ -260,7 +260,7 @@ dt { color: var(--muted); } dd { margin: 0; font-weight: 800; text-align: right;
     height: var(--header-h);
     overflow: hidden;
   }
-  .company-header-info strong { color: #fff !important; font-size: 7.5pt; }
+  .company-header-info strong { color: #87918a !important; font-size: 7.5pt; }
   .invoice-meta,
   .invoice-title {
     display: block !important;
