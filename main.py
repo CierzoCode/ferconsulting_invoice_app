@@ -62,9 +62,12 @@ class ClientSnapshot(BaseModel):
     postal_code: str = ""
     city: str = ""
     email: str = ""
+    default_payment_method: str = ""
+    default_delivery_method: str = ""
 
 
 class InvoiceIn(BaseModel):
+    invoice_type: str = "invoice"
     invoice_date: Optional[date] = None
     fiscal_year: int = int(SETTINGS.get("fiscal_year", date.today().year))
     client: ClientSnapshot
@@ -89,6 +92,8 @@ class ClientIn(BaseModel):
     postal_code: str = ""
     city: str = ""
     email: str = ""
+    default_payment_method: str = ""
+    default_delivery_method: str = ""
 
 
 class ServiceIn(BaseModel):
@@ -109,14 +114,39 @@ class UserIn(BaseModel):
     active: bool = True
 
 
+class InvoiceCounterIn(BaseModel):
+    fiscal_year: int = Field(default_factory=lambda: date.today().year, ge=2000, le=2100)
+    prefix: str = "FAC-"
+    next_sequence: int = Field(ge=1)
+
+
 class InvoiceUpdateIn(InvoiceIn):
-    status: str = "registered"
+    status: str = "pendiente_envio"
     sent_by: str = ""
     sent_at: str = ""
 
 
+class InvoiceStatusIn(BaseModel):
+    status: str
+
+
 def money(value: float) -> float:
     return round(float(value or 0), 2)
+
+
+VALID_INVOICE_TYPES = {"invoice", "proforma"}
+VALID_STATUSES = {"proforma", "pendiente_envio", "enviada", "pagada"}
+
+
+def clean_invoice_type(value: str) -> str:
+    value = (value or "invoice").strip().casefold()
+    return value if value in VALID_INVOICE_TYPES else "invoice"
+
+
+def clean_status(value: str, invoice_type: str = "invoice") -> str:
+    fallback = "proforma" if invoice_type == "proforma" else "pendiente_envio"
+    value = (value or fallback).strip().casefold()
+    return value if value in VALID_STATUSES else fallback
 
 
 def default_admin_user() -> dict[str, Any]:
@@ -256,6 +286,21 @@ def next_invoice_preview() -> dict[str, Any]:
     }
 
 
+def next_proforma_preview() -> dict[str, Any]:
+    fiscal_year = int(SETTINGS.get("fiscal_year", date.today().year))
+    store = globals().get("supabase_store")
+    if store and store.available():
+        return store.preview_proforma_number(fiscal_year)
+    settings = read_json("settings.json", SETTINGS)
+    prefix = settings.get("proforma_prefix", "PRO-")
+    sequence = int(settings.get("next_proforma_sequence", 1))
+    return {
+        "proforma_prefix": prefix,
+        "proforma_sequence": sequence,
+        "proforma_number": f"{prefix}{fiscal_year}.{sequence}",
+    }
+
+
 def calculate_invoice(payload: InvoiceIn) -> dict[str, Any]:
     cleaned_items = []
     subtotal = 0.0
@@ -298,10 +343,31 @@ class LocalStore:
         sequence = int(settings.get("next_invoice_sequence", 1))
         return {"sequence": sequence, "invoice_number": f"{prefix}{fiscal_year}.{sequence}"}
 
+    def reserve_proforma_number(self, fiscal_year: int) -> dict[str, Any]:
+        settings = read_json("settings.json", SETTINGS)
+        prefix = settings.get("proforma_prefix", "PRO-")
+        sequence = int(settings.get("next_proforma_sequence", 1))
+        settings["next_proforma_sequence"] = sequence + 1
+        write_json("settings.json", settings)
+        return {"sequence": sequence, "invoice_number": f"{prefix}{fiscal_year}.{sequence}", "prefix": prefix, "fiscal_year": fiscal_year}
+
     def commit_sequence(self, sequence: int) -> None:
         settings = read_json("settings.json", SETTINGS)
         settings["next_invoice_sequence"] = int(sequence) + 1
         write_json("settings.json", settings)
+
+    def set_invoice_counter(self, payload: InvoiceCounterIn) -> dict[str, Any]:
+        settings = read_json("settings.json", SETTINGS)
+        settings["fiscal_year"] = payload.fiscal_year
+        settings["invoice_prefix"] = payload.prefix
+        settings["next_invoice_sequence"] = payload.next_sequence
+        write_json("settings.json", settings)
+        return {
+            "fiscal_year": payload.fiscal_year,
+            "prefix": payload.prefix,
+            "sequence": payload.next_sequence,
+            "invoice_number": f"{payload.prefix}{payload.fiscal_year}.{payload.next_sequence}",
+        }
 
     def save_invoice(self, invoice: dict[str, Any]) -> dict[str, Any]:
         invoices = read_json("local_invoices.json", [])
@@ -326,6 +392,29 @@ class LocalStore:
                 write_json("local_invoices.json", invoices)
                 return invoices[index]
         raise HTTPException(status_code=404, detail="Factura no encontrada.")
+
+    def update_invoice_status(self, invoice_id: str, status: str) -> dict[str, Any]:
+        invoices = read_json("local_invoices.json", [])
+        for index, current in enumerate(invoices):
+            if current.get("id") == invoice_id:
+                invoices[index] = {**current, "status": status, "updated_at": datetime.utcnow().isoformat() + "Z"}
+                write_json("local_invoices.json", invoices)
+                return invoices[index]
+        raise HTTPException(status_code=404, detail="Factura no encontrada.")
+
+    def update_client_defaults(self, client_id: Optional[int], payment_method: str, delivery_method: str) -> None:
+        if client_id is None:
+            return
+        clients = read_json("clients.json", [])
+        for index, client in enumerate(clients):
+            if int(client.get("id") or 0) == int(client_id):
+                clients[index] = {
+                    **client,
+                    "default_payment_method": payment_method,
+                    "default_delivery_method": delivery_method,
+                }
+                write_json("clients.json", clients)
+                return
 
 
 class SupabaseStore:
@@ -366,6 +455,15 @@ class SupabaseStore:
         data = result.data[0] if isinstance(result.data, list) else result.data
         return {"sequence": int(data["sequence"]), "invoice_number": data["invoice_number"]}
 
+    def reserve_proforma_number(self, fiscal_year: int) -> dict[str, Any]:
+        prefix = os.getenv("PROFORMA_PREFIX", SETTINGS.get("proforma_prefix", "PRO-"))
+        try:
+            result = self.client().rpc("reserve_proforma_number", {"p_year": fiscal_year, "p_prefix": prefix}).execute()
+        except Exception as exc:
+            raise HTTPException(status_code=500, detail="Falta ejecutar el SQL actualizado de Supabase para activar proformas.") from exc
+        data = result.data[0] if isinstance(result.data, list) else result.data
+        return {"sequence": int(data["sequence"]), "invoice_number": data["invoice_number"], "prefix": prefix, "fiscal_year": fiscal_year}
+
     def preview_invoice_number(self, fiscal_year: int) -> dict[str, Any]:
         prefix = os.getenv("INVOICE_PREFIX", SETTINGS.get("invoice_prefix", "FAC-"))
         result = self.client().table("invoice_counters").select("next_sequence,prefix").eq("year", fiscal_year).limit(1).execute()
@@ -377,6 +475,36 @@ class SupabaseStore:
             "prefix": prefix,
             "sequence": sequence,
             "invoice_number": f"{prefix}{fiscal_year}.{sequence}",
+        }
+
+    def preview_proforma_number(self, fiscal_year: int) -> dict[str, Any]:
+        prefix = os.getenv("PROFORMA_PREFIX", SETTINGS.get("proforma_prefix", "PRO-"))
+        try:
+            result = self.client().table("proforma_counters").select("next_sequence,prefix").eq("year", fiscal_year).limit(1).execute()
+            row = (result.data or [{}])[0]
+            sequence = int(row.get("next_sequence") or 1)
+            prefix = row.get("prefix") or prefix
+        except Exception:
+            sequence = 1
+        return {
+            "proforma_prefix": prefix,
+            "proforma_sequence": sequence,
+            "proforma_number": f"{prefix}{fiscal_year}.{sequence}",
+        }
+
+    def set_invoice_counter(self, payload: InvoiceCounterIn) -> dict[str, Any]:
+        row = {
+            "year": payload.fiscal_year,
+            "prefix": payload.prefix,
+            "next_sequence": payload.next_sequence,
+            "updated_at": datetime.utcnow().isoformat() + "Z",
+        }
+        self.client().table("invoice_counters").upsert(row, on_conflict="year").execute()
+        return {
+            "fiscal_year": payload.fiscal_year,
+            "prefix": payload.prefix,
+            "sequence": payload.next_sequence,
+            "invoice_number": f"{payload.prefix}{payload.fiscal_year}.{payload.next_sequence}",
         }
 
     def _list_table(self, table: str, order: str = "id") -> list[dict[str, Any]]:
@@ -515,6 +643,27 @@ class SupabaseStore:
         saved = {**existing, **updated[0], "items": items}
         return saved
 
+    def update_invoice_status(self, invoice_id: str, status: str) -> dict[str, Any]:
+        updated = self.client().table("invoices").update({
+            "status": status,
+            "updated_at": datetime.utcnow().isoformat() + "Z",
+        }).eq("id", invoice_id).execute().data
+        if not updated:
+            raise HTTPException(status_code=404, detail="Factura no encontrada.")
+        return updated[0]
+
+    def update_client_defaults(self, client_id: Optional[int], payment_method: str, delivery_method: str) -> None:
+        if client_id is None:
+            return
+        try:
+            self.client().table("clients").update({
+                "default_payment_method": payment_method,
+                "default_delivery_method": delivery_method,
+                "updated_at": datetime.utcnow().isoformat() + "Z",
+            }).eq("id", client_id).execute()
+        except Exception:
+            pass
+
 
 local_store = LocalStore()
 supabase_store = SupabaseStore()
@@ -537,7 +686,7 @@ def index(request: Request):
 def bootstrap():
     return {
         "company": COMPANY,
-        "settings": {**SETTINGS, **next_invoice_preview()},
+        "settings": {**SETTINGS, **next_invoice_preview(), **next_proforma_preview()},
         "clients": load_clients(),
         "services": load_services(),
         "client_prices": load_client_prices(),
@@ -588,12 +737,14 @@ def create_invoice(payload: InvoiceIn):
         raise HTTPException(status_code=400, detail="Añade al menos una línea de factura.")
 
     store = active_store()
-    reserved = store.reserve_invoice_number(payload.fiscal_year)
+    invoice_type = clean_invoice_type(payload.invoice_type)
+    reserved = store.reserve_proforma_number(payload.fiscal_year) if invoice_type == "proforma" else store.reserve_invoice_number(payload.fiscal_year)
     invoice_id = str(uuid4())
     today = payload.invoice_date or date.today()
 
     invoice = {
         "id": invoice_id,
+        "invoice_type": invoice_type,
         "invoice_number": reserved["invoice_number"],
         "fiscal_year": payload.fiscal_year,
         "sequence": reserved["sequence"],
@@ -611,7 +762,7 @@ def create_invoice(payload: InvoiceIn):
         "vat_rate": calculations["vat_rate"],
         "vat_amount": calculations["vat_amount"],
         "total": calculations["total"],
-        "status": "registered",
+        "status": clean_status("proforma" if invoice_type == "proforma" else "pendiente_envio", invoice_type),
         "notes": payload.notes,
         "sent_by": "",
         "sent_at": "",
@@ -619,10 +770,11 @@ def create_invoice(payload: InvoiceIn):
         "items": calculations["items"],
     }
     saved = store.save_invoice(deepcopy(invoice))
-    if isinstance(store, LocalStore):
+    if isinstance(store, LocalStore) and invoice_type == "invoice":
         store.commit_sequence(reserved["sequence"])
+    store.update_client_defaults(payload.client.id, payload.payment_method, payload.delivery_method)
     update_client_price_history(payload.client, calculations["items"])
-    return {"invoice": saved, "next": next_invoice_preview(), "storage": storage_name()}
+    return {"invoice": saved, "next": next_invoice_preview(), "proforma_next": next_proforma_preview(), "storage": storage_name()}
 
 
 @app.get("/api/invoices")
@@ -649,6 +801,7 @@ def update_invoice(invoice_id: str, payload: InvoiceUpdateIn):
     store = active_store()
     current = store.get_invoice(invoice_id)
     invoice = {
+        "invoice_type": clean_invoice_type(payload.invoice_type),
         "invoice_number": current.get("invoice_number"),
         "fiscal_year": payload.fiscal_year,
         "sequence": current.get("sequence"),
@@ -666,7 +819,7 @@ def update_invoice(invoice_id: str, payload: InvoiceUpdateIn):
         "vat_rate": calculations["vat_rate"],
         "vat_amount": calculations["vat_amount"],
         "total": calculations["total"],
-        "status": payload.status,
+        "status": clean_status(payload.status, clean_invoice_type(payload.invoice_type)),
         "notes": payload.notes,
         "sent_by": payload.sent_by,
         "sent_at": payload.sent_at,
@@ -674,8 +827,15 @@ def update_invoice(invoice_id: str, payload: InvoiceUpdateIn):
         "items": calculations["items"],
     }
     saved = store.update_invoice(invoice_id, invoice)
+    store.update_client_defaults(payload.client.id, payload.payment_method, payload.delivery_method)
     update_client_price_history(payload.client, calculations["items"])
     return {"invoice": saved}
+
+
+@app.put("/api/invoices/{invoice_id}/status")
+def update_invoice_status(invoice_id: str, payload: InvoiceStatusIn):
+    status = clean_status(payload.status)
+    return active_store().update_invoice_status(invoice_id, status)
 
 
 @app.get("/api/config")
@@ -686,8 +846,20 @@ def config():
         "client_prices": load_client_prices(),
         "users": [{k: v for k, v in user.items() if k != "password"} for user in load_users()],
         "invoices": active_store().list_invoices(),
-        "settings": {**SETTINGS, **next_invoice_preview()},
+        "settings": {**SETTINGS, **next_invoice_preview(), **next_proforma_preview()},
     }
+
+
+@app.put("/api/config/invoice-counter")
+def update_invoice_counter(payload: InvoiceCounterIn):
+    prefix = payload.prefix.strip() or "FAC-"
+    counter = InvoiceCounterIn(
+        fiscal_year=payload.fiscal_year,
+        prefix=prefix,
+        next_sequence=payload.next_sequence,
+    )
+    updated = active_store().set_invoice_counter(counter)
+    return {"settings": {**SETTINGS, **updated}, "storage": storage_name()}
 
 
 @app.post("/api/config/clients")

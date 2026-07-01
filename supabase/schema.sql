@@ -20,11 +20,23 @@ create table if not exists public.clients (
   postal_code text,
   city text,
   email text,
+  default_payment_method text,
+  default_delivery_method text,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
 
 create index if not exists clients_name_idx on public.clients using gin (to_tsvector('simple', coalesce(name,'') || ' ' || coalesce(tax_id,'') || ' ' || coalesce(city,'')));
+
+alter table public.clients add column if not exists default_payment_method text;
+alter table public.clients add column if not exists default_delivery_method text;
+
+create table if not exists public.proforma_counters (
+  year integer primary key,
+  prefix text not null default 'PRO-',
+  next_sequence integer not null default 1,
+  updated_at timestamptz not null default now()
+);
 
 create table if not exists public.services (
   id bigserial primary key,
@@ -67,6 +79,7 @@ create index if not exists client_prices_client_idx on public.client_prices(clie
 
 create table if not exists public.invoices (
   id uuid primary key default gen_random_uuid(),
+  invoice_type text not null default 'invoice',
   invoice_number text not null unique,
   fiscal_year integer not null,
   sequence integer not null,
@@ -96,6 +109,7 @@ create index if not exists invoices_date_idx on public.invoices(invoice_date des
 create index if not exists invoices_client_idx on public.invoices(client_name);
 
 alter table public.invoices add column if not exists delivery_method text;
+alter table public.invoices add column if not exists invoice_type text not null default 'invoice';
 alter table public.invoices add column if not exists sent_by text;
 alter table public.invoices add column if not exists sent_at timestamptz;
 alter table public.invoices add column if not exists updated_at timestamptz;
@@ -129,6 +143,30 @@ begin
 
   update public.invoice_counters
      set next_sequence = next_sequence + 1,
+         updated_at = now()
+   where year = p_year
+   returning next_sequence - 1, prefix into v_sequence, v_prefix;
+
+  return query select v_sequence, v_prefix || p_year::text || '.' || v_sequence::text;
+end;
+$$;
+
+create or replace function public.reserve_proforma_number(p_year integer, p_prefix text default 'PRO-')
+returns table(sequence integer, invoice_number text)
+language plpgsql
+security definer
+as $$
+declare
+  v_sequence integer;
+  v_prefix text;
+begin
+  insert into public.proforma_counters(year, prefix, next_sequence)
+  values (p_year, p_prefix, 1)
+  on conflict (year) do nothing;
+
+  update public.proforma_counters
+     set next_sequence = next_sequence + 1,
+         prefix = p_prefix,
          updated_at = now()
    where year = p_year
    returning next_sequence - 1, prefix into v_sequence, v_prefix;

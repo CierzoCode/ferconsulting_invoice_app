@@ -50,6 +50,13 @@
           <div class="logo-block">
             <img src="{{ url_for('static', path='/img/ferconsulting_logo.png') }}" alt="Ferconsulting" />
           </div>
+          <div class="company-header-info">
+            <strong>FERCONSULTING AGROTECH S.L.</strong>
+            <span>CIF B19827476</span>
+            <span>Puerta de la Villa S/N, 50280 Calatorao (Zaragoza)</span>
+            <span>ferconsulting@asesoragricola.com</span>
+            <span>asesoragricola.com</span>
+          </div>
         </div>
 
         <div class="invoice-title invoice-meta">
@@ -68,6 +75,17 @@
         </section>
         <div class="invoice-content">
           <section class="customer-grid">
+            <label>Tipo:</label>
+            <select id="invoiceTypeInput">
+              <option value="invoice">Factura</option>
+              <option value="proforma">Proforma</option>
+            </select>
+            <label>IVA:</label>
+            <select id="vatRateInput">
+              <option value="0.21">21%</option>
+              <option value="0.10">10%</option>
+              <option value="0">0%</option>
+            </select>
             <label>Cliente:</label>
             <div>
               <input id="clientInput" list="clientOptions" placeholder="Selecciona o escribe un cliente" autocomplete="off" />
@@ -112,7 +130,7 @@
 
           <div class="totals">
             <div><span>Subtotal</span><strong id="subtotalText">0,00 EUR</strong></div>
-            <div><span>I.V.A. 21%</span><strong id="vatText">0,00 EUR</strong></div>
+            <div><span id="vatLabel">I.V.A. 21%</span><strong id="vatText">0,00 EUR</strong></div>
             <div class="grand"><span>Total</span><strong id="totalText">0,00 EUR</strong></div>
           </div>
         </div>
@@ -161,11 +179,22 @@
       </section>
 
       <nav class="config-tabs" aria-label="Secciones de configuracion">
+        <button class="tab-btn" data-tab="numbering" type="button">Numeracion</button>
         <button class="tab-btn active" data-tab="clients" type="button">Clientes</button>
         <button class="tab-btn" data-tab="services" type="button">Servicios</button>
         <button class="tab-btn" data-tab="users" type="button">Usuarios</button>
         <button class="tab-btn" data-tab="invoices" type="button">Historico facturas</button>
       </nav>
+
+      <section class="config-panel" id="numberingPanel">
+        <form class="editor-grid numbering-grid" id="invoiceCounterForm">
+          <label>Ejercicio<input id="counterYearEdit" type="number" min="2000" max="2100" required /></label>
+          <label>Prefijo<input id="counterPrefixEdit" required /></label>
+          <label>Siguiente numero<input id="counterSequenceEdit" type="number" min="1" step="1" required /></label>
+          <output class="counter-preview" id="counterPreview">-</output>
+          <div class="form-actions"><button class="btn primary" type="submit">Guardar numeracion</button></div>
+        </form>
+      </section>
 
       <section class="config-panel active" id="clientsPanel">
         <form class="editor-grid" id="clientForm">
@@ -177,6 +206,8 @@
           <label>C.P.<input id="clientPostalEdit" /></label>
           <label>Ciudad<input id="clientCityEdit" /></label>
           <label>Email<input id="clientEmailEdit" type="email" /></label>
+          <label>Pago por defecto<select id="clientPaymentEdit"><option value="">Sin preferencia</option><option value="TRANSFERENCIA ES15 2100 3586 5022 0012 1937 LA CAIXA">Transferencia</option><option value="GIRO">Giro</option></select></label>
+          <label>Envio por defecto<select id="clientDeliveryEdit"><option value="">Sin preferencia</option><option value="email">Email</option><option value="postal">Correo postal</option></select></label>
           <div class="form-actions"><button class="btn primary" type="submit">Guardar cliente</button><button class="btn secondary" id="newClientBtn" type="button">Nuevo</button></div>
         </form>
         <div class="table-wrap"><table class="config-table"><thead><tr><th>Nombre</th><th>CIF</th><th>C.P.</th><th>Ciudad</th><th>Email</th><th></th></tr></thead><tbody id="clientsTable"></tbody></table></div>
@@ -209,7 +240,7 @@
       </section>
 
       <section class="config-panel" id="invoicesPanel">
-        <div class="table-wrap"><table class="config-table"><thead><tr><th>Factura</th><th>Cliente</th><th>Pago</th><th>Envio</th><th>Estado</th><th>Total</th><th></th></tr></thead><tbody id="invoicesTable"></tbody></table></div>
+        <div class="table-wrap"><table class="config-table"><thead><tr><th>Documento</th><th>Tipo</th><th>Cliente</th><th>Pago</th><th>Envio</th><th>Estado</th><th>Total</th><th></th></tr></thead><tbody id="invoicesTable"></tbody></table></div>
       </section>
     </main>
   </div>

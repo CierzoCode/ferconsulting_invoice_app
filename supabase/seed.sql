@@ -1,7 +1,9 @@
 -- Datos semilla exportados desde Factura Ferconsulting 2026.xlsm
 begin;
 
-insert into public.invoice_counters(year, prefix, next_sequence) values (2026, 'FAC-', 140) on conflict (year) do update set prefix = excluded.prefix, next_sequence = excluded.next_sequence, updated_at = now();
+insert into public.invoice_counters(year, prefix, next_sequence) values (2026, 'FAC-', 140) on conflict (year) do update set prefix = excluded.prefix, next_sequence = greatest(public.invoice_counters.next_sequence, excluded.next_sequence), updated_at = now();
+
+insert into public.proforma_counters(year, prefix, next_sequence) values (2026, 'PRO-', 1) on conflict (year) do update set prefix = excluded.prefix, next_sequence = public.proforma_counters.next_sequence, updated_at = now();
 
 insert into public.users(id, username, password, email, role, active) values (1, 'Admin', '1234', 'ferconsulting@asesoragricola.com', 'admin', true) on conflict (username) do update set password=excluded.password, email=excluded.email, role=excluded.role, active=excluded.active, updated_at=now();
 
