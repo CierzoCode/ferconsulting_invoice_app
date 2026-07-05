@@ -119,6 +119,9 @@ dt { color: var(--muted); } dd { margin: 0; font-weight: 800; text-align: right;
 .config-table { width: 100%; border-collapse: collapse; min-width: 860px; }
 .config-table th, .config-table td { border-bottom: 1px solid var(--line); padding: 10px 12px; text-align: left; vertical-align: top; }
 .config-table th { position: sticky; top: 0; background: var(--accent); color: #fff; z-index: 1; }
+.clients-config-table { min-width: 1180px; }
+.inline-client-input, .inline-client-select { min-width: 170px; padding: 8px 10px; }
+.inline-client-input { min-width: 220px; }
 .mini-btn { border: 1px solid var(--line); border-radius: 6px; background: #fff; color: var(--accent-dark); font-weight: 800; padding: 7px 10px; margin-right: 6px; cursor: pointer; }
 .mini-btn.danger { color: var(--danger); }
 .voice-panel { position: fixed; right: 24px; top: 96px; width: min(460px, calc(100vw - 32px)); z-index: 18; display: none; }

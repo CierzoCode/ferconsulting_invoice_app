@@ -768,8 +768,26 @@ function actionButtons(kind, id) {
   return `<button class="mini-btn" data-edit-${kind}="${id}" type="button">Editar</button><button class="mini-btn danger" data-delete-${kind}="${id}" type="button">Borrar</button>`;
 }
 
+function paymentPreferenceOptions(value = '') {
+  const options = [
+    ['', 'Sin preferencia'],
+    ['TRANSFERENCIA ES15 2100 3586 5022 0012 1937 LA CAIXA', 'Transferencia'],
+    ['GIRO', 'Giro'],
+  ];
+  return options.map(([optionValue, label]) => `<option value="${escapeHtml(optionValue)}" ${optionValue === value ? 'selected' : ''}>${label}</option>`).join('');
+}
+
+function deliveryPreferenceOptions(value = '') {
+  const options = [
+    ['', 'Sin preferencia'],
+    ['email', 'Email'],
+    ['postal', 'Correo postal'],
+  ];
+  return options.map(([optionValue, label]) => `<option value="${escapeHtml(optionValue)}" ${optionValue === value ? 'selected' : ''}>${label}</option>`).join('');
+}
+
 function renderClientsTable() {
-  qs('#clientsTable').innerHTML = state.clients.map(c => `<tr><td>${escapeHtml(c.name)}</td><td>${escapeHtml(c.tax_id)}</td><td>${escapeHtml(c.postal_code)}</td><td>${escapeHtml(c.city)}</td><td>${escapeHtml(c.email)}</td><td>${actionButtons('client', c.id)}</td></tr>`).join('');
+  qs('#clientsTable').innerHTML = state.clients.map(c => `<tr><td>${escapeHtml(c.name)}</td><td>${escapeHtml(c.tax_id)}</td><td>${escapeHtml(c.postal_code)}</td><td>${escapeHtml(c.city)}</td><td><input class="inline-client-input" data-client-field="email" data-client-id="${escapeHtml(c.id)}" type="email" value="${escapeHtml(c.email)}" autocomplete="email" aria-label="Email de ${escapeHtml(c.name)}"></td><td><select class="inline-client-select" data-client-field="default_payment_method" data-client-id="${escapeHtml(c.id)}" aria-label="Pago por defecto de ${escapeHtml(c.name)}">${paymentPreferenceOptions(c.default_payment_method || '')}</select></td><td><select class="inline-client-select" data-client-field="default_delivery_method" data-client-id="${escapeHtml(c.id)}" aria-label="Envio por defecto de ${escapeHtml(c.name)}">${deliveryPreferenceOptions(c.default_delivery_method || '')}</select></td><td>${actionButtons('client', c.id)}</td></tr>`).join('');
 }
 
 function renderServicesTable() {
@@ -931,6 +949,47 @@ async function saveClient(event) {
   loadConfig();
 }
 
+async function saveClientInline(target) {
+  const id = target.dataset.clientId;
+  const field = target.dataset.clientField;
+  const client = state.clients.find(row => String(row.id) === String(id));
+  if (!client || !field) return;
+  const previousValue = client[field] || '';
+  const nextValue = target.value.trim();
+  const nextClient = { ...client, [field]: nextValue };
+  if (field === 'default_delivery_method' && nextValue === 'email' && !cleanString(nextClient.email)) {
+    target.value = previousValue;
+    toast('Anade un email antes de guardar Email como envio por defecto.');
+    return;
+  }
+  const payload = {
+    external_code: cleanString(nextClient.external_code),
+    name: cleanString(nextClient.name),
+    tax_id: cleanString(nextClient.tax_id),
+    address: cleanString(nextClient.address),
+    postal_code: cleanString(nextClient.postal_code),
+    city: cleanString(nextClient.city),
+    email: cleanString(nextClient.email),
+    default_payment_method: cleanString(nextClient.default_payment_method),
+    default_delivery_method: cleanString(nextClient.default_delivery_method),
+  };
+  target.disabled = true;
+  try {
+    const saved = await api(`/api/config/clients/${id}`, { method: 'PUT', body: JSON.stringify(payload) });
+    Object.assign(client, saved);
+    if (String(state.selectedClient?.id) === String(id)) {
+      state.selectedClient = { ...state.selectedClient, ...saved };
+      selectClientByInput();
+    }
+    toast('Cliente actualizado.');
+  } catch (err) {
+    target.value = previousValue;
+    toast(err.message || 'No se ha podido actualizar el cliente.');
+  } finally {
+    target.disabled = false;
+  }
+}
+
 async function saveService(event) {
   event.preventDefault();
   const id = qs('#serviceIdEdit').value;
@@ -1024,6 +1083,11 @@ function bindConfigActions() {
   });
   document.addEventListener('change', async (event) => {
     const target = event.target;
+    if (!(target instanceof HTMLInputElement) && !(target instanceof HTMLSelectElement)) return;
+    if (target.dataset.clientField) {
+      await saveClientInline(target);
+      return;
+    }
     if (!(target instanceof HTMLSelectElement)) return;
     const statusInvoiceId = target.dataset.statusInvoice;
     if (!statusInvoiceId) return;
