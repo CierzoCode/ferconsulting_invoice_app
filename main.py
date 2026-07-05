@@ -100,6 +100,10 @@ class LoginIn(BaseModel):
     password: str
 
 
+class DeleteInvoiceIn(LoginIn):
+    pass
+
+
 class ClientIn(BaseModel):
     id: Optional[int] = None
     external_code: str = ""
@@ -223,6 +227,19 @@ def load_users() -> list[dict[str, Any]]:
     users = [default_admin_user()]
     write_json("users.json", users)
     return users
+
+
+def authenticate_user(username: str, password: str, require_admin: bool = False) -> dict[str, Any]:
+    normalized_username = username.strip().casefold()
+    for user in load_users():
+        if not user.get("active", True):
+            continue
+        if user.get("username", "").casefold() != normalized_username or user.get("password") != password:
+            continue
+        if require_admin and user.get("role", "admin").casefold() != "admin":
+            raise HTTPException(status_code=403, detail="El usuario no tiene permisos para borrar facturas.")
+        return user
+    raise HTTPException(status_code=401, detail="Usuario o contrasena incorrectos.")
 
 
 def next_id(rows: list[dict[str, Any]]) -> int:
@@ -433,6 +450,14 @@ class LocalStore:
                 write_json("local_invoices.json", invoices)
                 return invoices[index]
         raise HTTPException(status_code=404, detail="Factura no encontrada.")
+
+    def delete_invoice(self, invoice_id: str) -> dict[str, Any]:
+        invoices = read_json("local_invoices.json", [])
+        remaining = [invoice for invoice in invoices if invoice.get("id") != invoice_id]
+        if len(remaining) == len(invoices):
+            raise HTTPException(status_code=404, detail="Factura no encontrada.")
+        write_json("local_invoices.json", remaining)
+        return {"ok": True}
 
     def update_client_defaults(self, client_id: Optional[int], payment_method: str, delivery_method: str) -> None:
         if client_id is None:
@@ -684,6 +709,12 @@ class SupabaseStore:
             raise HTTPException(status_code=404, detail="Factura no encontrada.")
         return updated[0]
 
+    def delete_invoice(self, invoice_id: str) -> dict[str, Any]:
+        deleted = self.client().table("invoices").delete().eq("id", invoice_id).execute().data
+        if deleted is not None and len(deleted) == 0:
+            raise HTTPException(status_code=404, detail="Factura no encontrada.")
+        return {"ok": True}
+
     def update_client_defaults(self, client_id: Optional[int], payment_method: str, delivery_method: str) -> None:
         if client_id is None:
             return
@@ -729,12 +760,9 @@ def bootstrap():
 
 @app.post("/api/login")
 def login(payload: LoginIn):
-    username = payload.username.strip().casefold()
-    for user in load_users():
-        if user.get("active", True) and user.get("username", "").casefold() == username and user.get("password") == payload.password:
-            safe_user = {k: v for k, v in user.items() if k != "password"}
-            return {"ok": True, "user": safe_user}
-    raise HTTPException(status_code=401, detail="Usuario o contraseña incorrectos.")
+    user = authenticate_user(payload.username, payload.password)
+    safe_user = {k: v for k, v in user.items() if k != "password"}
+    return {"ok": True, "user": safe_user}
 
 
 @app.get("/api/clients")
@@ -868,6 +896,12 @@ def update_invoice(invoice_id: str, payload: InvoiceUpdateIn):
 def update_invoice_status(invoice_id: str, payload: InvoiceStatusIn):
     status = clean_status(payload.status)
     return active_store().update_invoice_status(invoice_id, status)
+
+
+@app.delete("/api/invoices/{invoice_id}")
+def delete_invoice(invoice_id: str, payload: DeleteInvoiceIn):
+    authenticate_user(payload.username, payload.password, require_admin=True)
+    return active_store().delete_invoice(invoice_id)
 
 
 @app.get("/api/config")

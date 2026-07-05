@@ -245,6 +245,20 @@
     </main>
   </div>
 
+  <div class="confirm-overlay hidden" id="deleteInvoiceOverlay">
+    <form class="confirm-card" id="deleteInvoiceForm">
+      <h2>Eliminar factura</h2>
+      <p class="muted" id="deleteInvoiceText">Confirma tus credenciales para eliminar el registro.</p>
+      <label>Usuario<input id="deleteInvoiceUser" autocomplete="username" required /></label>
+      <label>Contrasena<input id="deleteInvoicePassword" type="password" autocomplete="current-password" required /></label>
+      <p class="muted" id="deleteInvoiceError"></p>
+      <div class="confirm-actions">
+        <button class="btn secondary" id="deleteInvoiceCancelBtn" type="button">Cancelar</button>
+        <button class="btn primary danger-action" id="deleteInvoiceConfirmBtn" type="submit">Eliminar</button>
+      </div>
+    </form>
+  </div>
+
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
   <section class="voice-panel no-print" id="voicePanel" aria-live="polite">
     <div class="voice-card">

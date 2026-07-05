@@ -90,6 +90,14 @@ dt { color: var(--muted); } dd { margin: 0; font-weight: 800; text-align: right;
 .login-card img { width: 210px; background: var(--accent); border-radius: 8px; padding: 12px; }
 .login-card h1 { font-size: 30px; }
 .login-card label, .editor-grid label, .notes-block { display: grid; gap: 6px; font-weight: 800; color: var(--muted); }
+.confirm-overlay { position: fixed; inset: 0; background: rgba(30, 37, 24, .72); z-index: 25; display: grid; place-items: center; padding: 24px; }
+.confirm-overlay.hidden { display: none; }
+.confirm-card { width: min(440px, 100%); background: #fff; border: 1px solid var(--line); border-radius: 8px; box-shadow: var(--shadow); padding: 24px; display: grid; gap: 14px; }
+.confirm-card h2 { margin: 0; font-size: 28px; }
+.confirm-card label { display: grid; gap: 6px; font-weight: 800; color: var(--muted); }
+.confirm-card .muted { margin: 0; }
+.confirm-actions { display: flex; justify-content: flex-end; gap: 10px; flex-wrap: wrap; }
+.btn.danger-action { background: var(--danger); color: #fff; }
 .postal-window { width: 92mm; min-height: 42mm; border: 1.5px dashed #6f7f55; margin: 12px 0 18px auto; padding: 9mm 10mm; background: #fbfcf8; color: var(--ink); }
 .postal-window span { display: block; color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: .08em; margin-bottom: 6px; }
 .postal-window p { margin: 3px 0; }

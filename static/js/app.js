@@ -9,6 +9,7 @@ const state = {
   rows: 10,
   editingInvoiceId: null,
   editingInvoiceStatus: null,
+  pendingDeleteInvoiceId: null,
   currentUser: JSON.parse(sessionStorage.getItem('fer_user') || 'null'),
   voice: {
     recognition: null,
@@ -689,8 +690,58 @@ function renderInvoicesTable() {
   qs('#invoicesTable').innerHTML = state.invoices.map(inv => {
     const status = inv.status || (inv.invoice_type === 'proforma' ? 'proforma' : 'pendiente_envio');
     const options = statusOptions.map(opt => `<option value="${opt}" ${opt === status ? 'selected' : ''}>${opt}</option>`).join('');
-    return `<tr><td>${escapeHtml(inv.invoice_number)}</td><td>${escapeHtml(inv.invoice_type === 'proforma' ? 'Proforma' : 'Factura')}</td><td>${escapeHtml(inv.client_name)}</td><td>${escapeHtml(inv.payment_method)}</td><td>${escapeHtml(inv.delivery_method || '')}</td><td><select class="status-select" data-status-invoice="${escapeHtml(inv.id)}">${options}</select></td><td>${fmtMoney.format(Number(inv.total || 0))}</td><td><button class="mini-btn" data-edit-invoice="${escapeHtml(inv.id)}" type="button">Editar</button></td></tr>`;
+    return `<tr><td>${escapeHtml(inv.invoice_number)}</td><td>${escapeHtml(inv.invoice_type === 'proforma' ? 'Proforma' : 'Factura')}</td><td>${escapeHtml(inv.client_name)}</td><td>${escapeHtml(inv.payment_method)}</td><td>${escapeHtml(inv.delivery_method || '')}</td><td><select class="status-select" data-status-invoice="${escapeHtml(inv.id)}">${options}</select></td><td>${fmtMoney.format(Number(inv.total || 0))}</td><td><button class="mini-btn" data-edit-invoice="${escapeHtml(inv.id)}" type="button">Editar</button><button class="mini-btn danger" data-delete-invoice="${escapeHtml(inv.id)}" type="button">Borrar</button></td></tr>`;
   }).join('');
+}
+
+function openDeleteInvoiceModal(invoiceId) {
+  const invoice = state.invoices.find(row => String(row.id) === String(invoiceId));
+  state.pendingDeleteInvoiceId = invoiceId;
+  qs('#deleteInvoiceText').textContent = invoice
+    ? `Confirma tus credenciales para eliminar ${invoice.invoice_number} de ${invoice.client_name || 'cliente sin nombre'}.`
+    : 'Confirma tus credenciales para eliminar el registro.';
+  qs('#deleteInvoiceUser').value = state.currentUser?.username || '';
+  qs('#deleteInvoicePassword').value = '';
+  qs('#deleteInvoiceError').textContent = '';
+  qs('#deleteInvoiceOverlay').classList.remove('hidden');
+  qs('#deleteInvoicePassword').focus();
+}
+
+function closeDeleteInvoiceModal() {
+  state.pendingDeleteInvoiceId = null;
+  qs('#deleteInvoiceOverlay').classList.add('hidden');
+  qs('#deleteInvoiceForm').reset();
+  qs('#deleteInvoiceError').textContent = '';
+}
+
+async function confirmDeleteInvoice(event) {
+  event.preventDefault();
+  const invoiceId = state.pendingDeleteInvoiceId;
+  if (!invoiceId) return closeDeleteInvoiceModal();
+  const username = qs('#deleteInvoiceUser').value.trim();
+  const password = qs('#deleteInvoicePassword').value;
+  if (!username || !password) {
+    qs('#deleteInvoiceError').textContent = 'Introduce usuario y contrasena.';
+    return;
+  }
+  const btn = qs('#deleteInvoiceConfirmBtn');
+  btn.disabled = true;
+  qs('#deleteInvoiceError').textContent = '';
+  try {
+    await api(`/api/invoices/${encodeURIComponent(invoiceId)}`, {
+      method: 'DELETE',
+      body: JSON.stringify({ username, password }),
+    });
+    if (String(state.editingInvoiceId) === String(invoiceId)) clearForm(false);
+    closeDeleteInvoiceModal();
+    toast('Factura eliminada.');
+    await loadLastInvoices();
+    await loadConfig();
+  } catch (err) {
+    qs('#deleteInvoiceError').textContent = err.message || 'No se ha podido eliminar la factura.';
+  } finally {
+    btn.disabled = false;
+  }
 }
 
 function clearClientForm() {
@@ -865,6 +916,8 @@ function bindConfigActions() {
     }
     const invoiceId = target.dataset.editInvoice;
     if (invoiceId) loadInvoiceIntoForm(invoiceId).catch(err => toast(err.message));
+    const deleteInvoiceId = target.dataset.deleteInvoice;
+    if (deleteInvoiceId) openDeleteInvoiceModal(deleteInvoiceId);
     for (const kind of ['Client', 'Service', 'User']) {
       const id = target.dataset[`delete${kind}`];
       if (id && confirm('Borrar registro?')) {
@@ -933,6 +986,8 @@ async function init() {
   updatePrintTexts();
   applyDebugFlags();
   qs('#loginForm').addEventListener('submit', handleLogin);
+  qs('#deleteInvoiceForm').addEventListener('submit', confirmDeleteInvoice);
+  qs('#deleteInvoiceCancelBtn').addEventListener('click', closeDeleteInvoiceModal);
   qs('#logoutBtn').addEventListener('click', () => {
     state.currentUser = null;
     sessionStorage.removeItem('fer_user');
