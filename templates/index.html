@@ -11,8 +11,8 @@
     <form class="login-card" id="loginForm">
       <img src="{{ url_for('static', path='/img/ferconsulting_logo.png') }}" alt="Ferconsulting" />
       <h1>Acceso</h1>
-      <label>Usuario<input id="loginUser" value="Admin" autocomplete="username" /></label>
-      <label>Contrasena<input id="loginPassword" type="password" value="1234" autocomplete="current-password" /></label>
+      <label>Usuario<input id="loginUser" autocomplete="username" /></label>
+      <label>Contrasena<input id="loginPassword" type="password" autocomplete="current-password" /></label>
       <button class="btn primary" type="submit">Entrar</button>
       <p class="muted" id="loginError"></p>
     </form>
