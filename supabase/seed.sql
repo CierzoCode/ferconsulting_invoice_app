@@ -5,7 +5,7 @@ insert into public.invoice_counters(year, prefix, next_sequence) values (2026, '
 
 insert into public.proforma_counters(year, prefix, next_sequence) values (2026, 'PRO-', 1) on conflict (year) do update set prefix = excluded.prefix, next_sequence = public.proforma_counters.next_sequence, updated_at = now();
 
-insert into public.users(id, username, password, email, role, active) values (1, 'Admin', '1234', 'ferconsulting@asesoragricola.com', 'admin', true) on conflict (username) do update set password=excluded.password, email=excluded.email, role=excluded.role, active=excluded.active, updated_at=now();
+insert into public.users(id, username, password, email, role, active) values (1, 'Admin', 'pbkdf2_sha256$bwL6NSzDTrymn1K8fC14/Q==$YQLfo9ihvPeuEvsr7mZMpU2NDH5PhNoIUe41bOL8U4w=', 'ferconsulting@asesoragricola.com', 'admin', true) on conflict (username) do update set password=excluded.password, email=excluded.email, role=excluded.role, active=excluded.active, updated_at=now();
 
 insert into public.client_prices(id, client_id, client_name, service_id, service_name, unit, unit_price, updated_at) values (1, 6, 'AMAETON S.L.', 7, 'Servicio de transporte nacional de mercancÃ­as por carretera', 'h', 59.0, '2026-06-22T16:07:13.995502Z') on conflict (id) do update set client_id=excluded.client_id, client_name=excluded.client_name, service_id=excluded.service_id, service_name=excluded.service_name, unit=excluded.unit, unit_price=excluded.unit_price, updated_at=excluded.updated_at;
 

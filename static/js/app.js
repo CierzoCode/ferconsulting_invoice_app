@@ -372,6 +372,7 @@ function rememberClientPrices(payload) {
 async function api(path, options = {}) {
   const res = await fetch(path, {
     ...options,
+    credentials: 'same-origin',
     headers: { 'Content-Type': 'application/json', ...(options.headers || {}) },
   });
   const data = await res.json().catch(() => ({}));
@@ -1108,6 +1109,7 @@ async function handleLogin(event) {
     state.currentUser = data.user;
     sessionStorage.setItem('fer_user', JSON.stringify(data.user));
     applySession();
+    await loadAppData();
   } catch (err) {
     qs('#loginError').textContent = err.message;
   }
@@ -1128,8 +1130,7 @@ function applyDebugFlags() {
   }
 }
 
-async function init() {
-  renderRows();
+async function loadAppData() {
   const data = await api('/api/bootstrap');
   state.clients = data.clients || [];
   state.services = data.services || [];
@@ -1143,11 +1144,21 @@ async function init() {
   fillCounterForm();
   qs('#paymentMethodInput').value = state.settings.default_payment_method || qs('#paymentMethodInput').value;
   updatePrintTexts();
+  restoreInvoiceDraft();
+  setView(sessionStorage.getItem(viewKey) || 'invoice');
+  syncNotesPrintState();
+  calculateTotals();
+  await loadLastInvoices();
+}
+
+async function init() {
+  renderRows();
   applyDebugFlags();
   qs('#loginForm').addEventListener('submit', handleLogin);
   qs('#deleteInvoiceForm').addEventListener('submit', confirmDeleteInvoice);
   qs('#deleteInvoiceCancelBtn').addEventListener('click', closeDeleteInvoiceModal);
-  qs('#logoutBtn').addEventListener('click', () => {
+  qs('#logoutBtn').addEventListener('click', async () => {
+    await api('/api/logout', { method: 'POST' }).catch(() => {});
     state.currentUser = null;
     sessionStorage.removeItem('fer_user');
     applySession();
@@ -1191,12 +1202,17 @@ async function init() {
   });
   window.addEventListener('beforeunload', saveInvoiceDraft);
   bindConfigActions();
-  restoreInvoiceDraft();
-  setView(sessionStorage.getItem(viewKey) || 'invoice');
+  try {
+    const session = await api('/api/session');
+    state.currentUser = session.user;
+    sessionStorage.setItem('fer_user', JSON.stringify(session.user));
+    await loadAppData();
+  } catch (_) {
+    state.currentUser = null;
+    sessionStorage.removeItem('fer_user');
+    qs('#storageMode').textContent = 'Inicia sesion para cargar datos.';
+  }
   applySession();
-  syncNotesPrintState();
-  calculateTotals();
-  loadLastInvoices();
 }
 
 init().catch(err => toast(err.message || 'No se pudo iniciar la aplicacion.'));

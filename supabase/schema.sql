@@ -101,6 +101,8 @@ create table if not exists public.invoices (
   notes text,
   sent_by text,
   sent_at timestamptz,
+  deleted_at timestamptz,
+  deleted_by bigint references public.users(id),
   created_at timestamptz not null default now(),
   updated_at timestamptz
 );
@@ -112,7 +114,24 @@ alter table public.invoices add column if not exists delivery_method text;
 alter table public.invoices add column if not exists invoice_type text not null default 'invoice';
 alter table public.invoices add column if not exists sent_by text;
 alter table public.invoices add column if not exists sent_at timestamptz;
+alter table public.invoices add column if not exists deleted_at timestamptz;
+alter table public.invoices add column if not exists deleted_by bigint references public.users(id);
 alter table public.invoices add column if not exists updated_at timestamptz;
+
+create table if not exists public.audit_log (
+  id uuid primary key default gen_random_uuid(),
+  action text not null,
+  entity text not null,
+  entity_id text,
+  user_id bigint references public.users(id),
+  username text,
+  ip text,
+  details jsonb not null default '{}'::jsonb,
+  created_at timestamptz not null default now()
+);
+
+create index if not exists audit_log_entity_idx on public.audit_log(entity, entity_id);
+create index if not exists audit_log_created_idx on public.audit_log(created_at desc);
 
 create table if not exists public.invoice_items (
   id uuid primary key default gen_random_uuid(),
