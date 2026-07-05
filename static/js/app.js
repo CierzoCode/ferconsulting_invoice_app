@@ -535,7 +535,7 @@ function collectPayload(status = 'pendiente_envio') {
   if (state.editingInvoiceId) {
     payload.status = state.editingInvoiceStatus || (qs('#invoiceTypeInput').value === 'proforma' ? 'proforma' : status);
     payload.sent_by = '';
-    payload.sent_at = '';
+    payload.sent_at = null;
   }
   return payload;
 }

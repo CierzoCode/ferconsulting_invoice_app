@@ -155,7 +155,7 @@ class InvoiceCounterIn(BaseModel):
 class InvoiceUpdateIn(InvoiceIn):
     status: str = "pendiente_envio"
     sent_by: str = ""
-    sent_at: str = ""
+    sent_at: Optional[str] = None
 
 
 class InvoiceStatusIn(BaseModel):
@@ -797,7 +797,7 @@ def create_invoice(payload: InvoiceIn):
         "status": clean_status("proforma" if invoice_type == "proforma" else "pendiente_envio", invoice_type),
         "notes": payload.notes,
         "sent_by": "",
-        "sent_at": "",
+        "sent_at": None,
         "created_at": datetime.utcnow().isoformat() + "Z",
         "items": calculations["items"],
     }
@@ -854,7 +854,7 @@ def update_invoice(invoice_id: str, payload: InvoiceUpdateIn):
         "status": clean_status(payload.status, clean_invoice_type(payload.invoice_type)),
         "notes": payload.notes,
         "sent_by": payload.sent_by,
-        "sent_at": payload.sent_at,
+        "sent_at": payload.sent_at or None,
         "updated_at": datetime.utcnow().isoformat() + "Z",
         "items": calculations["items"],
     }
