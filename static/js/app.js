@@ -10,6 +10,7 @@ const state = {
   editingInvoiceId: null,
   editingInvoiceStatus: null,
   pendingDeleteInvoiceId: null,
+  restoringInvoiceDraft: false,
   currentUser: JSON.parse(sessionStorage.getItem('fer_user') || 'null'),
   voice: {
     recognition: null,
@@ -23,6 +24,8 @@ const fmtMoney = new Intl.NumberFormat('es-ES', { style: 'currency', currency: '
 const fmtDate = new Intl.DateTimeFormat('es-ES');
 const qs = (s) => document.querySelector(s);
 const urlParams = new URLSearchParams(window.location.search);
+const invoiceDraftKey = 'fer_invoice_draft';
+const viewKey = 'fer_active_view';
 
 function toast(message) {
   const el = qs('#toast');
@@ -176,6 +179,7 @@ function fillVoiceDraftIntoInvoice() {
   if (notes) qs('#notesInput').value = notes;
   updatePrintTexts();
   calculateTotals();
+  saveInvoiceDraft();
 }
 
 const voiceSteps = [
@@ -382,13 +386,101 @@ async function api(path, options = {}) {
 }
 
 function setView(name) {
-  qs('#invoiceView').classList.toggle('active', name === 'invoice');
-  qs('#configView').classList.toggle('active', name === 'config');
-  qs('#printBtn').style.display = name === 'invoice' ? '' : 'none';
-  qs('#registerBtn').style.display = name === 'invoice' ? '' : 'none';
-  qs('#invoiceViewBtn').classList.toggle('active', name === 'invoice');
-  qs('#configViewBtn').classList.toggle('active', name === 'config');
-  if (name === 'config') loadConfig();
+  const view = name === 'config' ? 'config' : 'invoice';
+  sessionStorage.setItem(viewKey, view);
+  qs('#invoiceView').classList.toggle('active', view === 'invoice');
+  qs('#configView').classList.toggle('active', view === 'config');
+  qs('#printBtn').style.display = view === 'invoice' ? '' : 'none';
+  qs('#registerBtn').style.display = view === 'invoice' ? '' : 'none';
+  qs('#invoiceViewBtn').classList.toggle('active', view === 'invoice');
+  qs('#configViewBtn').classList.toggle('active', view === 'config');
+  if (view === 'config') loadConfig();
+}
+
+function invoiceDraftRows() {
+  return Array.from(document.querySelectorAll('#lineItems tr')).map(row => ({
+    quantity: row.querySelector('.qty-input').value,
+    service: row.querySelector('.service-input').value,
+    unit: row.querySelector('.unit-cell').textContent,
+    price: row.querySelector('.price-input').value,
+    discount: row.querySelector('.discount-input').value,
+  }));
+}
+
+function saveInvoiceDraft() {
+  if (state.restoringInvoiceDraft) return;
+  const rows = invoiceDraftRows();
+  const hasContent = Boolean(
+    state.editingInvoiceId ||
+    qs('#clientInput').value.trim() ||
+    qs('#notesInput').value.trim() ||
+    rows.some(row => row.quantity || row.service || row.price || row.discount)
+  );
+  if (!hasContent) {
+    clearSavedInvoiceDraft();
+    return;
+  }
+  const draft = {
+    saved_at: new Date().toISOString(),
+    editing_invoice_id: state.editingInvoiceId,
+    editing_invoice_status: state.editingInvoiceStatus,
+    register_button_text: qs('#registerBtn').textContent,
+    rows_count: state.rows,
+    client_input: qs('#clientInput').value,
+    invoice_type: qs('#invoiceTypeInput').value,
+    vat_rate: qs('#vatRateInput').value,
+    payment_method: qs('#paymentMethodInput').value,
+    delivery_method: qs('#deliveryMethodInput').value,
+    sequence: qs('#sequenceInput').value,
+    notes: qs('#notesInput').value,
+    rows,
+  };
+  sessionStorage.setItem(invoiceDraftKey, JSON.stringify(draft));
+}
+
+function clearSavedInvoiceDraft() {
+  sessionStorage.removeItem(invoiceDraftKey);
+}
+
+function restoreInvoiceDraft() {
+  const raw = sessionStorage.getItem(invoiceDraftKey);
+  if (!raw) return;
+  let draft;
+  try {
+    draft = JSON.parse(raw);
+  } catch (_) {
+    clearSavedInvoiceDraft();
+    return;
+  }
+  state.restoringInvoiceDraft = true;
+  try {
+    state.editingInvoiceId = draft.editing_invoice_id || null;
+    state.editingInvoiceStatus = draft.editing_invoice_status || null;
+    qs('#registerBtn').textContent = draft.register_button_text || (state.editingInvoiceId ? 'Guardar cambios' : '2 Registrar factura');
+    renderRows(Math.max(10, Number(draft.rows_count || 0), (draft.rows || []).length));
+    qs('#clientInput').value = draft.client_input || '';
+    qs('#invoiceTypeInput').value = draft.invoice_type || 'invoice';
+    qs('#vatRateInput').value = draft.vat_rate || '0.21';
+    qs('#notesInput').value = draft.notes || '';
+    if (draft.sequence) qs('#sequenceInput').value = draft.sequence;
+    (draft.rows || []).forEach((item, index) => {
+      const row = qs('#lineItems').children[index];
+      if (!row) return;
+      row.querySelector('.qty-input').value = item.quantity || '';
+      row.querySelector('.service-input').value = item.service || '';
+      row.querySelector('.unit-cell').textContent = item.unit || '';
+      row.querySelector('.price-input').value = item.price || '';
+      row.querySelector('.discount-input').value = item.discount || '';
+    });
+    selectClientByInput();
+    qs('#paymentMethodInput').value = draft.payment_method || state.settings.default_payment_method || qs('#paymentMethodInput').value;
+    qs('#deliveryMethodInput').value = draft.delivery_method || qs('#deliveryMethodInput').value;
+    qs('#sequencePrint').textContent = qs('#sequenceInput').value;
+    updatePrintTexts();
+    calculateTotals();
+  } finally {
+    state.restoringInvoiceDraft = false;
+  }
 }
 
 function fillDataLists() {
@@ -424,6 +516,7 @@ function addLine() {
   state.rows += 1;
   qs('#lineItems').appendChild(createRow(state.rows));
   calculateTotals();
+  saveInvoiceDraft();
 }
 
 function onTableInput(event) {
@@ -600,6 +693,7 @@ function clearForm(showToast = true) {
   });
   updatePrintTexts();
   calculateTotals();
+  clearSavedInvoiceDraft();
   if (showToast) toast('Formulario limpio.');
 }
 
@@ -636,6 +730,7 @@ async function loadInvoiceIntoForm(invoiceId) {
   updatePrintTexts();
   calculateTotals();
   qs('#registerBtn').textContent = 'Guardar cambios';
+  saveInvoiceDraft();
   setView('invoice');
   toast(`Editando factura ${invoice.invoice_number}.`);
 }
@@ -1012,6 +1107,8 @@ async function init() {
   qs('#invoiceTypeInput').addEventListener('change', updateInvoiceNumberDisplay);
   qs('#vatRateInput').addEventListener('change', calculateTotals);
   qs('#sequenceInput').addEventListener('input', () => qs('#sequencePrint').textContent = qs('#sequenceInput').value);
+  qs('#invoiceView').addEventListener('input', saveInvoiceDraft);
+  qs('#invoiceView').addEventListener('change', saveInvoiceDraft);
   qs('#printBtn').addEventListener('click', () => { selectClientByInput(); updatePrintTexts(); calculateTotals(); window.print(); });
   qs('#registerBtn').addEventListener('click', registerInvoice);
   qs('#clearBtn').addEventListener('click', () => clearForm(true));
@@ -1028,7 +1125,10 @@ async function init() {
     updatePrintTexts();
     syncNotesPrintState();
   });
+  window.addEventListener('beforeunload', saveInvoiceDraft);
   bindConfigActions();
+  restoreInvoiceDraft();
+  setView(sessionStorage.getItem(viewKey) || 'invoice');
   applySession();
   syncNotesPrintState();
   calculateTotals();
