@@ -88,8 +88,9 @@
             </select>
             <label>Cliente:</label>
             <div>
-              <input id="clientInput" list="clientOptions" placeholder="Selecciona o escribe un cliente" autocomplete="off" />
-              <datalist id="clientOptions"></datalist>
+              <select id="clientInput">
+                <option value="">Selecciona un cliente</option>
+              </select>
             </div>
             <label>C.I.F.:</label><output id="clientTaxId"></output>
             <label>Direccion:</label><output id="clientAddress"></output>
@@ -121,8 +122,6 @@
               <tbody id="lineItems"></tbody>
             </table>
           </div>
-          <datalist id="serviceOptions"></datalist>
-
           <label class="notes-block">
             Conceptos / comentarios
             <textarea id="notesInput" rows="4" placeholder="Anade conceptos, comentarios o instrucciones que deban aparecer en la factura."></textarea>

@@ -485,31 +485,34 @@ function restoreInvoiceDraft() {
 }
 
 function fillDataLists() {
-  qs('#clientOptions').innerHTML = state.clients.map(c => `<option value="${escapeHtml(c.name)}">${escapeHtml([c.tax_id, c.postal_code, c.city].filter(Boolean).join(' - '))}</option>`).join('');
-  updateServiceOptions();
+  const selectedClient = qs('#clientInput').value;
+  qs('#clientInput').innerHTML = `<option value="">Selecciona un cliente</option>${state.clients.map(c => `<option value="${escapeHtml(c.name)}">${escapeHtml([c.name, c.tax_id, c.postal_code, c.city].filter(Boolean).join(' - '))}</option>`).join('')}`;
+  qs('#clientInput').value = selectedClient;
+  refreshServiceSelects();
 }
 
-function updateServiceOptions(query = '') {
-  const terms = normalize(query).split(/\s+/).filter(Boolean);
-  const services = state.services
+function serviceOptionsHtml(selectedValue = '') {
+  return `<option value="">Selecciona un servicio</option>${state.services
     .filter(s => s.active !== false)
-    .map(s => {
-      const haystack = normalize([s.name, s.code, s.unit, s.unit_price].filter(Boolean).join(' '));
-      const score = terms.length ? terms.reduce((total, term) => total + (haystack.includes(term) ? 1 : 0), 0) : 1;
-      return { service: s, score, haystack };
-    })
-    .filter(item => item.score > 0)
-    .sort((a, b) => b.score - a.score || a.haystack.length - b.haystack.length)
-    .slice(0, 30)
-    .map(({ service }) => `<option value="${escapeHtml(service.name)}">${escapeHtml([service.unit, fmtMoney.format(Number(service.unit_price || 0))].filter(Boolean).join(' - '))}</option>`);
-  qs('#serviceOptions').innerHTML = services.join('');
+    .map(service => {
+      const label = [service.name, service.unit, fmtMoney.format(Number(service.unit_price || 0))].filter(Boolean).join(' - ');
+      return `<option value="${escapeHtml(service.name)}" ${service.name === selectedValue ? 'selected' : ''}>${escapeHtml(label)}</option>`;
+    }).join('')}`;
+}
+
+function refreshServiceSelects() {
+  document.querySelectorAll('.service-input').forEach(select => {
+    const selected = select.value;
+    select.innerHTML = serviceOptionsHtml(selected);
+    select.value = selected;
+  });
 }
 
 function createRow(index) {
   const tr = document.createElement('tr');
   tr.innerHTML = `
     <td><input class="qty-input" type="number" min="0" step="0.01" inputmode="decimal" aria-label="Cantidad linea ${index}"></td>
-    <td><input class="service-input" list="serviceOptions" aria-label="Servicio linea ${index}"></td>
+    <td><select class="service-input" aria-label="Servicio linea ${index}">${serviceOptionsHtml()}</select></td>
     <td><span class="readonly-cell unit-cell"></span></td>
     <td><input class="price-input" type="number" min="0" step="0.0001" inputmode="decimal" aria-label="Precio linea ${index}"></td>
     <td><input class="discount-input" type="number" min="0" max="100" step="0.01" inputmode="decimal" aria-label="Descuento linea ${index}"></td>
@@ -525,11 +528,6 @@ function renderRows(count = state.rows) {
   if (!tbody.dataset.bound) {
     tbody.addEventListener('input', onTableInput);
     tbody.addEventListener('change', onTableInput);
-    tbody.addEventListener('focusin', event => {
-      if (event.target.classList?.contains('service-input')) {
-        updateServiceOptions(event.target.value);
-      }
-    });
     tbody.dataset.bound = 'true';
   }
 }
@@ -549,9 +547,6 @@ function onTableInput(event) {
   }
   const serviceInput = row.querySelector('.service-input');
   const service = serviceByName(serviceInput.value);
-  if (event.target.classList.contains('service-input')) {
-    updateServiceOptions(serviceInput.value);
-  }
   if (service && event.target.classList.contains('service-input')) {
     row.querySelector('.unit-cell').textContent = service.unit || '';
     applyRecommendedPrice(row, service, true);
