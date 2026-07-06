@@ -750,19 +750,23 @@ async function loadLastInvoices() {
 }
 
 async function loadConfig() {
-  const data = await api('/api/config');
-  state.clients = data.clients || [];
-  state.services = data.services || [];
-  state.clientPrices = data.client_prices || [];
-  state.users = data.users || [];
-  state.invoices = data.invoices || [];
-  state.settings = data.settings || state.settings;
-  fillDataLists();
-  fillCounterForm();
-  renderClientsTable();
-  renderServicesTable();
-  renderUsersTable();
-  renderInvoicesTable();
+  try {
+    const data = await api('/api/config');
+    state.clients = data.clients || [];
+    state.services = data.services || [];
+    state.clientPrices = data.client_prices || [];
+    state.users = data.users || [];
+    state.invoices = data.invoices || [];
+    state.settings = data.settings || state.settings;
+    fillDataLists();
+    fillCounterForm();
+    renderClientsTable();
+    renderServicesTable();
+    renderUsersTable();
+    renderInvoicesTable();
+  } catch (err) {
+    toast(err.message || 'No se pudo cargar la configuracion.');
+  }
 }
 
 function actionButtons(kind, id) {

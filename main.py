@@ -922,11 +922,21 @@ class SupabaseStore:
         return inserted
 
     def list_invoices(self) -> list[dict[str, Any]]:
-        result = self.client().table("invoices").select("*").is_("deleted_at", "null").order("created_at", desc=True).limit(50).execute()
+        try:
+            result = self.client().table("invoices").select("*").is_("deleted_at", "null").order("created_at", desc=True).limit(50).execute()
+        except Exception as exc:
+            if "deleted_at" not in str(exc):
+                raise
+            result = self.client().table("invoices").select("*").order("created_at", desc=True).limit(50).execute()
         return result.data or []
 
     def get_invoice(self, invoice_id: str) -> dict[str, Any]:
-        invoice_result = self.client().table("invoices").select("*").eq("id", invoice_id).is_("deleted_at", "null").limit(1).execute()
+        try:
+            invoice_result = self.client().table("invoices").select("*").eq("id", invoice_id).is_("deleted_at", "null").limit(1).execute()
+        except Exception as exc:
+            if "deleted_at" not in str(exc):
+                raise
+            invoice_result = self.client().table("invoices").select("*").eq("id", invoice_id).limit(1).execute()
         if not invoice_result.data:
             raise HTTPException(status_code=404, detail="Factura no encontrada.")
         invoice = invoice_result.data[0]
@@ -960,11 +970,16 @@ class SupabaseStore:
         return updated[0]
 
     def delete_invoice(self, invoice_id: str, deleted_by: Optional[int] = None) -> dict[str, Any]:
-        deleted = self.client().table("invoices").update({
-            "deleted_at": datetime.utcnow().isoformat() + "Z",
-            "deleted_by": deleted_by,
-            "updated_at": datetime.utcnow().isoformat() + "Z",
-        }).eq("id", invoice_id).is_("deleted_at", "null").execute().data
+        try:
+            deleted = self.client().table("invoices").update({
+                "deleted_at": datetime.utcnow().isoformat() + "Z",
+                "deleted_by": deleted_by,
+                "updated_at": datetime.utcnow().isoformat() + "Z",
+            }).eq("id", invoice_id).is_("deleted_at", "null").execute().data
+        except Exception as exc:
+            if "deleted_at" not in str(exc):
+                raise
+            raise HTTPException(status_code=500, detail="Falta ejecutar el SQL actualizado de Supabase para activar el borrado logico.") from exc
         if deleted is not None and len(deleted) == 0:
             raise HTTPException(status_code=404, detail="Factura no encontrada.")
         return {"ok": True}
