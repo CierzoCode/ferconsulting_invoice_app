@@ -48,12 +48,21 @@ h1 { margin: 0; font-size: clamp(28px, 4vw, 44px); }
 .customer-grid { display: grid; grid-template-columns: 105px 1fr 105px 1fr; gap: 12px 16px; margin: 26px 0; align-items: center; }
 .customer-grid label { color: var(--muted); font-weight: 800; }
 input, select, textarea { width: 100%; border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; font: inherit; color: var(--ink); background: #fff; }
+.combo-input { min-width: 0; }
+.combo-menu { position: absolute; max-height: 280px; overflow: auto; background: #fff; border: 1px solid var(--line); border-radius: 8px; box-shadow: var(--shadow); z-index: 80; padding: 4px; }
+.combo-menu.hidden { display: none; }
+.combo-option { width: 100%; border: 0; border-radius: 6px; background: #fff; color: var(--ink); display: grid; gap: 2px; padding: 8px 10px; text-align: left; cursor: pointer; font: inherit; }
+.combo-option:hover, .combo-option:focus { background: #f0f4ea; outline: none; }
+.combo-option strong { font-size: 13px; line-height: 1.25; overflow-wrap: anywhere; }
+.combo-option span { color: var(--muted); font-size: 12px; }
+.combo-empty { padding: 10px 12px; color: var(--muted); font-size: 13px; }
 output { min-height: 40px; border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; background: #fafbf8; display: block; }
 .invoice-table-wrap { width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; }
 .invoice-table { width: 100%; min-width: 720px; border-collapse: collapse; table-layout: fixed; margin-top: 18px; }
 .invoice-table th { background: var(--accent); color: white; padding: 11px 8px; font-size: 13px; text-transform: uppercase; letter-spacing: .04em; }
 .invoice-table td { border: 1px solid var(--line); padding: 6px; vertical-align: top; }
-.invoice-table input { border: 0; border-radius: 7px; padding: 7px; background: transparent; }
+.invoice-table input { border: 0; border-radius: 7px; padding: 7px; background: transparent; min-width: 0; }
+.invoice-table .service-input { width: 100%; font-size: 13px; line-height: 1.25; overflow: hidden; text-overflow: ellipsis; }
 .invoice-table input:focus { outline: 2px solid rgba(95, 113, 68, .25); background: #fff; }
 .invoice-table tr.has-client-price .price-input { background: #eef5e6; outline: 1px solid rgba(95, 113, 68, .35); }
 .qty { width: 90px; }.unit { width: 85px; }.price { width: 105px; }.discount { width: 110px; }.amount { width: 115px; }

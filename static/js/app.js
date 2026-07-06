@@ -485,26 +485,81 @@ function restoreInvoiceDraft() {
 }
 
 function fillDataLists() {
-  const selectedClient = qs('#clientInput').value;
-  qs('#clientInput').innerHTML = `<option value="">Selecciona un cliente</option>${state.clients.map(c => `<option value="${escapeHtml(c.name)}">${escapeHtml([c.name, c.tax_id, c.postal_code, c.city].filter(Boolean).join(' - '))}</option>`).join('')}`;
-  qs('#clientInput').value = selectedClient;
-  refreshServiceSelects();
+  closeAutocomplete();
 }
 
-function serviceOptionsHtml(selectedValue = '') {
-  return `<option value="">Selecciona un servicio</option>${state.services
-    .filter(s => s.active !== false)
-    .map(service => {
-      const label = [service.name, service.unit, fmtMoney.format(Number(service.unit_price || 0))].filter(Boolean).join(' - ');
-      return `<option value="${escapeHtml(service.name)}" ${service.name === selectedValue ? 'selected' : ''}>${escapeHtml(label)}</option>`;
-    }).join('')}`;
+function autocompleteMenu() {
+  let menu = qs('#autocompleteMenu');
+  if (!menu) {
+    menu = document.createElement('div');
+    menu.id = 'autocompleteMenu';
+    menu.className = 'combo-menu hidden';
+    document.body.appendChild(menu);
+  }
+  return menu;
 }
 
-function refreshServiceSelects() {
-  document.querySelectorAll('.service-input').forEach(select => {
-    const selected = select.value;
-    select.innerHTML = serviceOptionsHtml(selected);
-    select.value = selected;
+function closeAutocomplete() {
+  const menu = qs('#autocompleteMenu');
+  if (menu) menu.classList.add('hidden');
+}
+
+function comboMatches(kind, query) {
+  const normalizedQuery = normalize(query);
+  const terms = normalizedQuery.split(/\s+/).filter(Boolean);
+  const rows = kind === 'client'
+    ? state.clients.map(client => ({
+      value: client.name,
+      label: client.name,
+      detail: [client.tax_id, client.postal_code, client.city].filter(Boolean).join(' - '),
+      haystack: [client.name, client.tax_id, client.postal_code, client.city].filter(Boolean).join(' '),
+    }))
+    : state.services.filter(service => service.active !== false).map(service => ({
+      value: service.name,
+      label: service.name,
+      detail: [service.unit, fmtMoney.format(Number(service.unit_price || 0))].filter(Boolean).join(' - '),
+      haystack: [service.name, service.code, service.unit, service.unit_price].filter(Boolean).join(' '),
+    }));
+  return rows
+    .map(row => {
+      const haystack = normalize(row.haystack);
+      const phraseMatch = normalizedQuery && haystack.includes(normalizedQuery);
+      const allTermsMatch = terms.length > 0 && terms.every(term => haystack.includes(term));
+      const startsMatch = normalizedQuery && haystack.startsWith(normalizedQuery);
+      const score = startsMatch ? 3 : (phraseMatch ? 2 : (allTermsMatch ? 1 : 0));
+      return { ...row, score, haystack };
+    })
+    .filter(row => terms.length === 0 || row.score > 0)
+    .sort((a, b) => b.score - a.score || a.haystack.length - b.haystack.length)
+    .slice(0, 30);
+}
+
+function openAutocomplete(input, kind) {
+  const menu = autocompleteMenu();
+  const matches = comboMatches(kind, input.value);
+  if (!matches.length) {
+    const rect = input.getBoundingClientRect();
+    menu.style.left = `${rect.left + window.scrollX}px`;
+    menu.style.top = `${rect.bottom + window.scrollY + 4}px`;
+    menu.style.width = `${rect.width}px`;
+    menu.innerHTML = '<div class="combo-empty">Sin coincidencias</div>';
+    menu.classList.remove('hidden');
+    return;
+  }
+  const rect = input.getBoundingClientRect();
+  menu.style.left = `${rect.left + window.scrollX}px`;
+  menu.style.top = `${rect.bottom + window.scrollY + 4}px`;
+  menu.style.width = `${rect.width}px`;
+  menu.innerHTML = matches.map(item => `<button class="combo-option" type="button" data-value="${escapeHtml(item.value)}"><strong>${escapeHtml(item.label)}</strong>${item.detail ? `<span>${escapeHtml(item.detail)}</span>` : ''}</button>`).join('');
+  menu.classList.remove('hidden');
+  menu.querySelectorAll('.combo-option').forEach(option => {
+    option.addEventListener('mousedown', event => {
+      event.preventDefault();
+      input.value = option.dataset.value || '';
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+      input.dispatchEvent(new Event('change', { bubbles: true }));
+      closeAutocomplete();
+    });
   });
 }
 
@@ -512,7 +567,7 @@ function createRow(index) {
   const tr = document.createElement('tr');
   tr.innerHTML = `
     <td><input class="qty-input" type="number" min="0" step="0.01" inputmode="decimal" aria-label="Cantidad linea ${index}"></td>
-    <td><select class="service-input" aria-label="Servicio linea ${index}">${serviceOptionsHtml()}</select></td>
+    <td><input class="service-input combo-input" autocomplete="off" aria-label="Servicio linea ${index}"></td>
     <td><span class="readonly-cell unit-cell"></span></td>
     <td><input class="price-input" type="number" min="0" step="0.0001" inputmode="decimal" aria-label="Precio linea ${index}"></td>
     <td><input class="discount-input" type="number" min="0" max="100" step="0.01" inputmode="decimal" aria-label="Descuento linea ${index}"></td>
@@ -528,6 +583,9 @@ function renderRows(count = state.rows) {
   if (!tbody.dataset.bound) {
     tbody.addEventListener('input', onTableInput);
     tbody.addEventListener('change', onTableInput);
+    tbody.addEventListener('focusin', event => {
+      if (event.target.classList?.contains('service-input')) openAutocomplete(event.target, 'service');
+    });
     tbody.dataset.bound = 'true';
   }
 }
@@ -547,6 +605,9 @@ function onTableInput(event) {
   }
   const serviceInput = row.querySelector('.service-input');
   const service = serviceByName(serviceInput.value);
+  if (event.target.classList.contains('service-input')) {
+    openAutocomplete(serviceInput, 'service');
+  }
   if (service && event.target.classList.contains('service-input')) {
     row.querySelector('.unit-cell').textContent = service.unit || '';
     applyRecommendedPrice(row, service, true);
@@ -1198,7 +1259,17 @@ async function init() {
   });
   qs('#refreshConfigBtn').addEventListener('click', loadConfig);
   qs('#clientInput').addEventListener('change', selectClientByInput);
-  qs('#clientInput').addEventListener('input', selectClientByInput);
+  qs('#clientInput').addEventListener('input', () => {
+    selectClientByInput();
+    openAutocomplete(qs('#clientInput'), 'client');
+  });
+  qs('#clientInput').addEventListener('focus', () => openAutocomplete(qs('#clientInput'), 'client'));
+  document.addEventListener('mousedown', event => {
+    if (!event.target.closest?.('.combo-menu') && !event.target.classList?.contains('combo-input')) closeAutocomplete();
+  });
+  document.addEventListener('keydown', event => {
+    if (event.key === 'Escape') closeAutocomplete();
+  });
   qs('#paymentMethodInput').addEventListener('change', updatePrintTexts);
   qs('#deliveryMethodInput').addEventListener('change', updatePrintTexts);
   qs('#notesInput').addEventListener('input', syncNotesPrintState);
