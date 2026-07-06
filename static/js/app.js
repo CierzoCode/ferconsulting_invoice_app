@@ -486,7 +486,23 @@ function restoreInvoiceDraft() {
 
 function fillDataLists() {
   qs('#clientOptions').innerHTML = state.clients.map(c => `<option value="${escapeHtml(c.name)}">${escapeHtml([c.tax_id, c.postal_code, c.city].filter(Boolean).join(' - '))}</option>`).join('');
-  qs('#serviceOptions').innerHTML = state.services.filter(s => s.active !== false).map(s => `<option value="${escapeHtml(s.name)}">${escapeHtml([s.unit, fmtMoney.format(Number(s.unit_price || 0))].filter(Boolean).join(' - '))}</option>`).join('');
+  updateServiceOptions();
+}
+
+function updateServiceOptions(query = '') {
+  const terms = normalize(query).split(/\s+/).filter(Boolean);
+  const services = state.services
+    .filter(s => s.active !== false)
+    .map(s => {
+      const haystack = normalize([s.name, s.code, s.unit, s.unit_price].filter(Boolean).join(' '));
+      const score = terms.length ? terms.reduce((total, term) => total + (haystack.includes(term) ? 1 : 0), 0) : 1;
+      return { service: s, score, haystack };
+    })
+    .filter(item => item.score > 0)
+    .sort((a, b) => b.score - a.score || a.haystack.length - b.haystack.length)
+    .slice(0, 30)
+    .map(({ service }) => `<option value="${escapeHtml(service.name)}">${escapeHtml([service.unit, fmtMoney.format(Number(service.unit_price || 0))].filter(Boolean).join(' - '))}</option>`);
+  qs('#serviceOptions').innerHTML = services.join('');
 }
 
 function createRow(index) {
@@ -509,6 +525,11 @@ function renderRows(count = state.rows) {
   if (!tbody.dataset.bound) {
     tbody.addEventListener('input', onTableInput);
     tbody.addEventListener('change', onTableInput);
+    tbody.addEventListener('focusin', event => {
+      if (event.target.classList?.contains('service-input')) {
+        updateServiceOptions(event.target.value);
+      }
+    });
     tbody.dataset.bound = 'true';
   }
 }
@@ -528,6 +549,9 @@ function onTableInput(event) {
   }
   const serviceInput = row.querySelector('.service-input');
   const service = serviceByName(serviceInput.value);
+  if (event.target.classList.contains('service-input')) {
+    updateServiceOptions(serviceInput.value);
+  }
   if (service && event.target.classList.contains('service-input')) {
     row.querySelector('.unit-cell').textContent = service.unit || '';
     applyRecommendedPrice(row, service, true);
