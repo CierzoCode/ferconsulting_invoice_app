@@ -342,28 +342,40 @@ def default_admin_user() -> dict[str, Any]:
 def load_clients() -> list[dict[str, Any]]:
     store = globals().get("supabase_store")
     if store and store.available():
-        return store.list_clients()
+        try:
+            return store.list_clients()
+        except Exception:
+            return read_json("clients.json", [])
     return read_json("clients.json", [])
 
 
 def load_services() -> list[dict[str, Any]]:
     store = globals().get("supabase_store")
     if store and store.available():
-        return store.list_services()
+        try:
+            return store.list_services()
+        except Exception:
+            return read_json("services.json", [])
     return read_json("services.json", [])
 
 
 def load_client_prices() -> list[dict[str, Any]]:
     store = globals().get("supabase_store")
     if store and store.available():
-        return store.list_client_prices()
+        try:
+            return store.list_client_prices()
+        except Exception:
+            return read_json("client_prices.json", [])
     return read_json("client_prices.json", [])
 
 
 def load_users() -> list[dict[str, Any]]:
     store = globals().get("supabase_store")
     if store and store.available():
-        return store.list_users()
+        try:
+            return store.list_users()
+        except Exception:
+            return read_json("users.json", [default_admin_user()])
     users = read_json("users.json", [])
     if users:
         return users
@@ -563,7 +575,10 @@ def next_invoice_preview() -> dict[str, Any]:
     store = globals().get("supabase_store")
     if store and store.available():
         fiscal_year = int(SETTINGS.get("fiscal_year", date.today().year))
-        return store.preview_invoice_number(fiscal_year)
+        try:
+            return store.preview_invoice_number(fiscal_year)
+        except Exception:
+            pass
     settings = read_json("settings.json", SETTINGS)
     fiscal_year = int(settings.get("fiscal_year", date.today().year))
     prefix = settings.get("invoice_prefix", "FAC-")
@@ -580,7 +595,10 @@ def next_proforma_preview() -> dict[str, Any]:
     fiscal_year = int(SETTINGS.get("fiscal_year", date.today().year))
     store = globals().get("supabase_store")
     if store and store.available():
-        return store.preview_proforma_number(fiscal_year)
+        try:
+            return store.preview_proforma_number(fiscal_year)
+        except Exception:
+            pass
     settings = read_json("settings.json", SETTINGS)
     prefix = settings.get("proforma_prefix", "PRO-")
     sequence = int(settings.get("next_proforma_sequence", 1))
@@ -589,6 +607,13 @@ def next_proforma_preview() -> dict[str, Any]:
         "proforma_sequence": sequence,
         "proforma_number": f"{prefix}{fiscal_year}.{sequence}",
     }
+
+
+def load_invoices_safe() -> list[dict[str, Any]]:
+    try:
+        return active_store().list_invoices()
+    except Exception:
+        return read_json("local_invoices.json", [])
 
 
 def calculate_invoice(payload: InvoiceIn) -> dict[str, Any]:
@@ -1133,7 +1158,7 @@ def create_invoice(payload: InvoiceIn, request: Request, user: dict[str, Any] = 
 
 @app.get("/api/invoices")
 def list_invoices(user: dict[str, Any] = Depends(require_roles("admin", "gestor", "lectura"))):
-    return active_store().list_invoices()
+    return load_invoices_safe()
 
 
 @app.get("/api/invoices/{invoice_id}")
@@ -1214,7 +1239,7 @@ def config(user: dict[str, Any] = Depends(require_roles("admin", "gestor", "lect
         "services": load_services(),
         "client_prices": load_client_prices(),
         "users": [public_user(user) for user in load_users()] if user.get("role") == "admin" else [],
-        "invoices": active_store().list_invoices(),
+        "invoices": load_invoices_safe(),
         "settings": {**SETTINGS, **next_invoice_preview(), **next_proforma_preview()},
     }
 

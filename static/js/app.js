@@ -9,6 +9,7 @@ const state = {
   rows: 10,
   editingInvoiceId: null,
   editingInvoiceStatus: null,
+  editingInvoiceNumber: null,
   pendingDeleteInvoiceId: null,
   restoringInvoiceDraft: false,
   currentUser: JSON.parse(sessionStorage.getItem('fer_user') || 'null'),
@@ -425,6 +426,7 @@ function saveInvoiceDraft() {
     saved_at: new Date().toISOString(),
     editing_invoice_id: state.editingInvoiceId,
     editing_invoice_status: state.editingInvoiceStatus,
+    editing_invoice_number: state.editingInvoiceNumber,
     register_button_text: qs('#registerBtn').textContent,
     rows_count: state.rows,
     client_input: qs('#clientInput').value,
@@ -457,6 +459,7 @@ function restoreInvoiceDraft() {
   try {
     state.editingInvoiceId = draft.editing_invoice_id || null;
     state.editingInvoiceStatus = draft.editing_invoice_status || null;
+    state.editingInvoiceNumber = draft.editing_invoice_number || null;
     qs('#registerBtn').textContent = draft.register_button_text || (state.editingInvoiceId ? 'Guardar cambios' : '2 Registrar factura');
     renderRows(Math.max(10, Number(draft.rows_count || 0), (draft.rows || []).length));
     qs('#clientInput').value = draft.client_input || '';
@@ -476,7 +479,7 @@ function restoreInvoiceDraft() {
     selectClientByInput();
     qs('#paymentMethodInput').value = draft.payment_method || state.settings.default_payment_method || qs('#paymentMethodInput').value;
     qs('#deliveryMethodInput').value = draft.delivery_method || qs('#deliveryMethodInput').value;
-    qs('#sequencePrint').textContent = qs('#sequenceInput').value;
+    updateInvoiceNumberDisplay();
     updatePrintTexts();
     calculateTotals();
   } finally {
@@ -486,6 +489,17 @@ function restoreInvoiceDraft() {
 
 function fillDataLists() {
   closeAutocomplete();
+}
+
+function upsertStateRow(collection, row) {
+  if (!row || row.id == null) return;
+  const index = state[collection].findIndex(item => String(item.id) === String(row.id));
+  if (index >= 0) state[collection][index] = { ...state[collection][index], ...row };
+  else state[collection].push(row);
+}
+
+function deleteStateRow(collection, id) {
+  state[collection] = state[collection].filter(item => String(item.id) !== String(id));
 }
 
 function autocompleteMenu() {
@@ -756,6 +770,7 @@ async function registerInvoice() {
 function clearForm(showToast = true) {
   state.editingInvoiceId = null;
   state.editingInvoiceStatus = null;
+  state.editingInvoiceNumber = null;
   qs('#registerBtn').textContent = '2 Registrar factura';
   qs('#clientInput').value = '';
   qs('#notesInput').value = '';
@@ -763,6 +778,7 @@ function clearForm(showToast = true) {
   qs('#vatRateInput').value = '0.21';
   qs('#deliveryMethodInput').value = 'email';
   qs('#paymentMethodInput').value = state.settings.default_payment_method || 'TRANSFERENCIA ES15 2100 3586 5022 0012 1937 LA CAIXA';
+  updateInvoiceNumberDisplay();
   selectClientByInput();
   document.querySelectorAll('#lineItems tr').forEach(row => {
     row.querySelector('.qty-input').value = '';
@@ -782,6 +798,7 @@ async function loadInvoiceIntoForm(invoiceId) {
   const invoice = await api(`/api/invoices/${invoiceId}`);
   state.editingInvoiceId = invoice.id;
   state.editingInvoiceStatus = invoice.status || null;
+  state.editingInvoiceNumber = invoiceDisplayParts(invoice);
   const existing = state.clients.find(c => Number(c.id) === Number(invoice.client_id));
   state.selectedClient = existing || {
     id: invoice.client_id,
@@ -796,6 +813,7 @@ async function loadInvoiceIntoForm(invoiceId) {
   qs('#paymentMethodInput').value = invoice.payment_method || state.settings.default_payment_method || qs('#paymentMethodInput').value;
   qs('#deliveryMethodInput').value = invoice.delivery_method || 'email';
   qs('#invoiceTypeInput').value = invoice.invoice_type || 'invoice';
+  updateInvoiceNumberDisplay();
   qs('#vatRateInput').value = String(Number(invoice.vat_rate ?? 0.21));
   qs('#notesInput').value = invoice.notes || '';
   renderRows(Math.max(10, (invoice.items || []).length));
@@ -969,7 +987,50 @@ function invoiceSequenceFromSettings() {
   return Number(state.settings.sequence || state.settings.next_invoice_sequence || 1);
 }
 
+function invoiceDisplayParts(invoice) {
+  const invoiceNumber = String(invoice?.invoice_number || '').trim();
+  const match = invoiceNumber.match(/^(.+\.)(\d+)$/);
+  if (match) {
+    return { prefixText: match[1], sequence: match[2] };
+  }
+  const prefix = invoice?.invoice_type === 'proforma'
+    ? (state.settings.proforma_prefix || 'PRO-')
+    : invoicePrefixFromSettings();
+  const year = Number(invoice?.fiscal_year || invoiceYearFromSettings());
+  const sequence = Number(invoice?.sequence || 1);
+  return { prefixText: invoiceNumber || `${prefix}${year}.`, sequence };
+}
+
+function currentInvoicePdfName() {
+  const prefix = (qs('#invoicePrefixText')?.textContent || '').trim();
+  const sequence = (qs('#sequenceInput')?.value || qs('#sequencePrint')?.textContent || '').trim();
+  const number = `${prefix} ${sequence}`.trim();
+  return (number || 'Factura').replace(/[\\/:*?"<>|]/g, '-');
+}
+
+function printInvoicePdf() {
+  selectClientByInput();
+  updatePrintTexts();
+  calculateTotals();
+  const originalTitle = document.title;
+  document.title = currentInvoicePdfName();
+  const restoreTitle = () => {
+    document.title = originalTitle;
+    window.removeEventListener('afterprint', restoreTitle);
+  };
+  window.addEventListener('afterprint', restoreTitle);
+  window.print();
+  setTimeout(restoreTitle, 2000);
+}
+
 function updateInvoiceNumberDisplay() {
+  if (state.editingInvoiceId && state.editingInvoiceNumber) {
+    qs('#sequenceInput').value = state.editingInvoiceNumber.sequence;
+    qs('#sequencePrint').textContent = qs('#sequenceInput').value;
+    qs('#invoicePrefixText').textContent = state.editingInvoiceNumber.prefixText;
+    updatePrintTexts();
+    return;
+  }
   const isProforma = qs('#invoiceTypeInput')?.value === 'proforma';
   const sequence = isProforma ? Number(state.settings.proforma_sequence || 1) : invoiceSequenceFromSettings();
   const prefix = isProforma ? (state.settings.proforma_prefix || 'PRO-') : invoicePrefixFromSettings();
@@ -997,41 +1058,51 @@ function fillCounterForm() {
 
 async function saveInvoiceCounter(event) {
   event.preventDefault();
-  const payload = {
-    fiscal_year: Number(qs('#counterYearEdit').value),
-    prefix: qs('#counterPrefixEdit').value.trim() || 'FAC-',
-    next_sequence: Number(qs('#counterSequenceEdit').value),
-  };
-  const data = await api('/api/config/invoice-counter', { method: 'PUT', body: JSON.stringify(payload) });
-  state.settings = data.settings || state.settings;
-  fillCounterForm();
-  updateInvoiceNumberDisplay();
-  toast(`Siguiente factura: ${state.settings.invoice_number}.`);
+  try {
+    const payload = {
+      fiscal_year: Number(qs('#counterYearEdit').value),
+      prefix: qs('#counterPrefixEdit').value.trim() || 'FAC-',
+      next_sequence: Number(qs('#counterSequenceEdit').value),
+    };
+    const data = await api('/api/config/invoice-counter', { method: 'PUT', body: JSON.stringify(payload) });
+    state.settings = data.settings || state.settings;
+    fillCounterForm();
+    updateInvoiceNumberDisplay();
+    toast(`Siguiente factura: ${state.settings.invoice_number}.`);
+  } catch (err) {
+    toast(err.message || 'No se ha podido guardar el contador.');
+  }
 }
 
 async function saveClient(event) {
   event.preventDefault();
-  const id = qs('#clientIdEdit').value;
-  const email = qs('#clientEmailEdit').value.trim();
-  const defaultDeliveryMethod = qs('#clientDeliveryEdit').value;
-  if (defaultDeliveryMethod === 'email' && !email) {
-    return toast('Anade un email al cliente antes de guardar Email como envio por defecto.');
+  try {
+    const id = qs('#clientIdEdit').value;
+    const email = qs('#clientEmailEdit').value.trim();
+    const defaultDeliveryMethod = qs('#clientDeliveryEdit').value;
+    if (defaultDeliveryMethod === 'email' && !email) {
+      return toast('Anade un email al cliente antes de guardar Email como envio por defecto.');
+    }
+    const payload = {
+      external_code: qs('#clientCodeEdit').value.trim(),
+      name: qs('#clientNameEdit').value.trim(),
+      tax_id: qs('#clientTaxEdit').value.trim(),
+      address: qs('#clientAddressEdit').value.trim(),
+      postal_code: qs('#clientPostalEdit').value.trim(),
+      city: qs('#clientCityEdit').value.trim(),
+      email,
+      default_payment_method: qs('#clientPaymentEdit').value,
+      default_delivery_method: defaultDeliveryMethod,
+    };
+    const saved = await api(id ? `/api/config/clients/${id}` : '/api/config/clients', { method: id ? 'PUT' : 'POST', body: JSON.stringify(payload) });
+    upsertStateRow('clients', saved);
+    toast('Cliente guardado.');
+    clearClientForm();
+    renderClientsTable();
+    fillDataLists();
+  } catch (err) {
+    toast(err.message || 'No se ha podido guardar el cliente.');
   }
-  const payload = {
-    external_code: qs('#clientCodeEdit').value.trim(),
-    name: qs('#clientNameEdit').value.trim(),
-    tax_id: qs('#clientTaxEdit').value.trim(),
-    address: qs('#clientAddressEdit').value.trim(),
-    postal_code: qs('#clientPostalEdit').value.trim(),
-    city: qs('#clientCityEdit').value.trim(),
-    email,
-    default_payment_method: qs('#clientPaymentEdit').value,
-    default_delivery_method: defaultDeliveryMethod,
-  };
-  await api(id ? `/api/config/clients/${id}` : '/api/config/clients', { method: id ? 'PUT' : 'POST', body: JSON.stringify(payload) });
-  toast('Cliente guardado.');
-  clearClientForm();
-  loadConfig();
 }
 
 async function saveClientInline(target) {
@@ -1077,34 +1148,45 @@ async function saveClientInline(target) {
 
 async function saveService(event) {
   event.preventDefault();
-  const id = qs('#serviceIdEdit').value;
-  const payload = {
-    code: qs('#serviceCodeEdit').value.trim(),
-    name: qs('#serviceNameEdit').value.trim(),
-    unit: qs('#serviceUnitEdit').value.trim(),
-    unit_price: Number(qs('#servicePriceEdit').value || 0),
-    active: qs('#serviceActiveEdit').value === 'true',
-  };
-  await api(id ? `/api/config/services/${id}` : '/api/config/services', { method: id ? 'PUT' : 'POST', body: JSON.stringify(payload) });
-  toast('Servicio guardado.');
-  clearServiceForm();
-  loadConfig();
+  try {
+    const id = qs('#serviceIdEdit').value;
+    const payload = {
+      code: qs('#serviceCodeEdit').value.trim(),
+      name: qs('#serviceNameEdit').value.trim(),
+      unit: qs('#serviceUnitEdit').value.trim(),
+      unit_price: Number(qs('#servicePriceEdit').value || 0),
+      active: qs('#serviceActiveEdit').value === 'true',
+    };
+    const saved = await api(id ? `/api/config/services/${id}` : '/api/config/services', { method: id ? 'PUT' : 'POST', body: JSON.stringify(payload) });
+    upsertStateRow('services', saved);
+    toast('Servicio guardado.');
+    clearServiceForm();
+    renderServicesTable();
+    fillDataLists();
+  } catch (err) {
+    toast(err.message || 'No se ha podido guardar el servicio.');
+  }
 }
 
 async function saveUser(event) {
   event.preventDefault();
-  const id = qs('#userIdEdit').value;
-  const payload = {
-    username: qs('#usernameEdit').value.trim(),
-    password: qs('#userPasswordEdit').value,
-    email: qs('#userEmailEdit').value.trim(),
-    role: qs('#userRoleEdit').value.trim() || 'admin',
-    active: qs('#userActiveEdit').value === 'true',
-  };
-  await api(id ? `/api/config/users/${id}` : '/api/config/users', { method: id ? 'PUT' : 'POST', body: JSON.stringify(payload) });
-  toast('Usuario guardado.');
-  clearUserForm();
-  loadConfig();
+  try {
+    const id = qs('#userIdEdit').value;
+    const payload = {
+      username: qs('#usernameEdit').value.trim(),
+      password: qs('#userPasswordEdit').value,
+      email: qs('#userEmailEdit').value.trim(),
+      role: qs('#userRoleEdit').value.trim() || 'admin',
+      active: qs('#userActiveEdit').value === 'true',
+    };
+    const saved = await api(id ? `/api/config/users/${id}` : '/api/config/users', { method: id ? 'PUT' : 'POST', body: JSON.stringify(payload) });
+    upsertStateRow('users', saved);
+    toast('Usuario guardado.');
+    clearUserForm();
+    renderUsersTable();
+  } catch (err) {
+    toast(err.message || 'No se ha podido guardar el usuario.');
+  }
 }
 
 function bindConfigActions() {
@@ -1160,9 +1242,19 @@ function bindConfigActions() {
     for (const kind of ['Client', 'Service', 'User']) {
       const id = target.dataset[`delete${kind}`];
       if (id && confirm('Borrar registro?')) {
-        await api(`/api/config/${kind.toLowerCase()}s/${id}`, { method: 'DELETE' });
-        toast('Registro borrado.');
-        loadConfig();
+        try {
+          await api(`/api/config/${kind.toLowerCase()}s/${id}`, { method: 'DELETE' });
+          deleteStateRow(`${kind.toLowerCase()}s`, id);
+          toast('Registro borrado.');
+          if (kind === 'Client') renderClientsTable();
+          if (kind === 'Service') {
+            renderServicesTable();
+            fillDataLists();
+          }
+          if (kind === 'User') renderUsersTable();
+        } catch (err) {
+          toast(err.message || 'No se ha podido borrar el registro.');
+        }
       }
     }
   });
@@ -1176,9 +1268,14 @@ function bindConfigActions() {
     if (!(target instanceof HTMLSelectElement)) return;
     const statusInvoiceId = target.dataset.statusInvoice;
     if (!statusInvoiceId) return;
-    await api(`/api/invoices/${statusInvoiceId}/status`, { method: 'PUT', body: JSON.stringify({ status: target.value }) });
-    toast('Estado actualizado.');
-    loadConfig();
+    try {
+      const saved = await api(`/api/invoices/${statusInvoiceId}/status`, { method: 'PUT', body: JSON.stringify({ status: target.value }) });
+      upsertStateRow('invoices', saved);
+      toast('Estado actualizado.');
+      renderInvoicesTable();
+    } catch (err) {
+      toast(err.message || 'No se ha podido actualizar el estado.');
+    }
   });
 }
 
@@ -1202,7 +1299,10 @@ async function handleLogin(event) {
 function applySession() {
   const logged = Boolean(state.currentUser);
   qs('#loginOverlay').classList.toggle('hidden', logged);
-  qs('#sessionUser').textContent = logged ? `- ${state.currentUser.username} (${state.currentUser.email || 'sin email'})` : '';
+  const sessionUser = qs('#sessionUser');
+  if (sessionUser) {
+    sessionUser.textContent = logged ? `- ${state.currentUser.username} (${state.currentUser.email || 'sin email'})` : '';
+  }
 }
 
 function applyDebugFlags() {
@@ -1222,7 +1322,10 @@ async function loadAppData() {
   state.users = data.users || [];
   state.settings = data.settings || {};
   fillDataLists();
-  qs('#storageMode').textContent = data.storage === 'supabase' ? 'Conectado a Supabase' : 'Modo local JSON';
+  const storageMode = qs('#storageMode');
+  if (storageMode) {
+    storageMode.textContent = data.storage === 'supabase' ? 'Conectado a Supabase' : 'Modo local JSON';
+  }
   qs('#invoiceDateText').textContent = fmtDate.format(new Date());
   updateInvoiceNumberDisplay();
   fillCounterForm();
@@ -1278,7 +1381,7 @@ async function init() {
   qs('#sequenceInput').addEventListener('input', () => qs('#sequencePrint').textContent = qs('#sequenceInput').value);
   qs('#invoiceView').addEventListener('input', saveInvoiceDraft);
   qs('#invoiceView').addEventListener('change', saveInvoiceDraft);
-  qs('#printBtn').addEventListener('click', () => { selectClientByInput(); updatePrintTexts(); calculateTotals(); window.print(); });
+  qs('#printBtn').addEventListener('click', printInvoicePdf);
   qs('#registerBtn').addEventListener('click', registerInvoice);
   qs('#clearBtn').addEventListener('click', () => clearForm(true));
   qs('#addLineBtn').addEventListener('click', addLine);
@@ -1304,7 +1407,10 @@ async function init() {
   } catch (_) {
     state.currentUser = null;
     sessionStorage.removeItem('fer_user');
-    qs('#storageMode').textContent = 'Inicia sesion para cargar datos.';
+    const storageMode = qs('#storageMode');
+    if (storageMode) {
+      storageMode.textContent = 'Inicia sesion para cargar datos.';
+    }
   }
   applySession();
 }
