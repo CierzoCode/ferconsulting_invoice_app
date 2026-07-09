@@ -6,6 +6,12 @@ const state = {
   invoices: [],
   selectedClient: null,
   settings: {},
+  configFilters: {
+    clients: '',
+    services: '',
+    users: '',
+    invoices: '',
+  },
   rows: 10,
   editingInvoiceId: null,
   editingInvoiceStatus: null,
@@ -889,25 +895,65 @@ function deliveryPreferenceOptions(value = '') {
   return options.map(([optionValue, label]) => `<option value="${escapeHtml(optionValue)}" ${optionValue === value ? 'selected' : ''}>${label}</option>`).join('');
 }
 
+function tableSearchTerms(kind) {
+  return normalize(state.configFilters[kind]).split(/\s+/).filter(Boolean);
+}
+
+function rowMatchesTerms(row, terms, fields) {
+  if (!terms.length) return true;
+  const haystack = normalize(fields.map(field => {
+    const value = typeof field === 'function' ? field(row) : row[field];
+    return value == null ? '' : String(value);
+  }).join(' '));
+  return terms.every(term => haystack.includes(term));
+}
+
+function emptyTableRow(colspan, message) {
+  return `<tr><td class="empty-table-row" colspan="${colspan}">${escapeHtml(message)}</td></tr>`;
+}
+
 function renderClientsTable() {
-  qs('#clientsTable').innerHTML = state.clients.map(c => `<tr><td>${escapeHtml(c.name)}</td><td>${escapeHtml(c.tax_id)}</td><td>${escapeHtml(c.postal_code)}</td><td>${escapeHtml(c.city)}</td><td><input class="inline-client-input" data-client-field="email" data-client-id="${escapeHtml(c.id)}" type="email" value="${escapeHtml(c.email)}" autocomplete="email" aria-label="Email de ${escapeHtml(c.name)}"></td><td><select class="inline-client-select" data-client-field="default_payment_method" data-client-id="${escapeHtml(c.id)}" aria-label="Pago por defecto de ${escapeHtml(c.name)}">${paymentPreferenceOptions(c.default_payment_method || '')}</select></td><td><select class="inline-client-select" data-client-field="default_delivery_method" data-client-id="${escapeHtml(c.id)}" aria-label="Envio por defecto de ${escapeHtml(c.name)}">${deliveryPreferenceOptions(c.default_delivery_method || '')}</select></td><td>${actionButtons('client', c.id)}</td></tr>`).join('');
+  const rows = state.clients.filter(c => rowMatchesTerms(c, tableSearchTerms('clients'), ['name', 'tax_id', 'postal_code', 'city', 'email', 'default_payment_method', 'default_delivery_method']));
+  qs('#clientsTable').innerHTML = rows.length
+    ? rows.map(c => `<tr><td>${escapeHtml(c.name)}</td><td>${escapeHtml(c.tax_id)}</td><td>${escapeHtml(c.postal_code)}</td><td>${escapeHtml(c.city)}</td><td><input class="inline-client-input" data-client-field="email" data-client-id="${escapeHtml(c.id)}" type="email" value="${escapeHtml(c.email)}" autocomplete="email" aria-label="Email de ${escapeHtml(c.name)}"></td><td><select class="inline-client-select" data-client-field="default_payment_method" data-client-id="${escapeHtml(c.id)}" aria-label="Pago por defecto de ${escapeHtml(c.name)}">${paymentPreferenceOptions(c.default_payment_method || '')}</select></td><td><select class="inline-client-select" data-client-field="default_delivery_method" data-client-id="${escapeHtml(c.id)}" aria-label="Envio por defecto de ${escapeHtml(c.name)}">${deliveryPreferenceOptions(c.default_delivery_method || '')}</select></td><td>${actionButtons('client', c.id)}</td></tr>`).join('')
+    : emptyTableRow(8, 'Sin clientes que coincidan con la busqueda.');
 }
 
 function renderServicesTable() {
-  qs('#servicesTable').innerHTML = state.services.map(s => `<tr><td>${escapeHtml(s.name)}</td><td>${escapeHtml(s.unit)}</td><td>${fmtMoney.format(Number(s.unit_price || 0))}</td><td>${s.active === false ? 'No' : 'Si'}</td><td>${actionButtons('service', s.id)}</td></tr>`).join('');
+  const rows = state.services.filter(s => rowMatchesTerms(s, tableSearchTerms('services'), ['code', 'name', 'unit', 'unit_price', row => row.active === false ? 'No' : 'Si']));
+  qs('#servicesTable').innerHTML = rows.length
+    ? rows.map(s => `<tr><td>${escapeHtml(s.name)}</td><td>${escapeHtml(s.unit)}</td><td>${fmtMoney.format(Number(s.unit_price || 0))}</td><td>${s.active === false ? 'No' : 'Si'}</td><td>${actionButtons('service', s.id)}</td></tr>`).join('')
+    : emptyTableRow(5, 'Sin servicios que coincidan con la busqueda.');
 }
 
 function renderUsersTable() {
-  qs('#usersTable').innerHTML = state.users.map(u => `<tr><td>${escapeHtml(u.username)}</td><td>${escapeHtml(u.email)}</td><td>${escapeHtml(u.role)}</td><td>${u.active === false ? 'No' : 'Si'}</td><td>${actionButtons('user', u.id)}</td></tr>`).join('');
+  const rows = state.users.filter(u => rowMatchesTerms(u, tableSearchTerms('users'), ['username', 'email', 'role', row => row.active === false ? 'No' : 'Si']));
+  qs('#usersTable').innerHTML = rows.length
+    ? rows.map(u => `<tr><td>${escapeHtml(u.username)}</td><td>${escapeHtml(u.email)}</td><td>${escapeHtml(u.role)}</td><td>${u.active === false ? 'No' : 'Si'}</td><td>${actionButtons('user', u.id)}</td></tr>`).join('')
+    : emptyTableRow(5, 'Sin usuarios que coincidan con la busqueda.');
 }
 
 function renderInvoicesTable() {
   const statusOptions = ['proforma', 'pendiente_envio', 'enviada', 'pagada'];
-  qs('#invoicesTable').innerHTML = state.invoices.map(inv => {
+  const rows = state.invoices.filter(inv => rowMatchesTerms(inv, tableSearchTerms('invoices'), ['invoice_number', row => row.invoice_type === 'proforma' ? 'Proforma' : 'Factura', 'client_name', 'payment_method', 'delivery_method', 'status', 'total']));
+  qs('#invoicesTable').innerHTML = rows.length ? rows.map(inv => {
     const status = inv.status || (inv.invoice_type === 'proforma' ? 'proforma' : 'pendiente_envio');
     const options = statusOptions.map(opt => `<option value="${opt}" ${opt === status ? 'selected' : ''}>${opt}</option>`).join('');
     return `<tr><td>${escapeHtml(inv.invoice_number)}</td><td>${escapeHtml(inv.invoice_type === 'proforma' ? 'Proforma' : 'Factura')}</td><td>${escapeHtml(inv.client_name)}</td><td>${escapeHtml(inv.payment_method)}</td><td>${escapeHtml(inv.delivery_method || '')}</td><td><select class="status-select" data-status-invoice="${escapeHtml(inv.id)}">${options}</select></td><td>${fmtMoney.format(Number(inv.total || 0))}</td><td><button class="mini-btn" data-edit-invoice="${escapeHtml(inv.id)}" type="button">Editar</button><button class="mini-btn danger" data-delete-invoice="${escapeHtml(inv.id)}" type="button">Borrar</button></td></tr>`;
-  }).join('');
+  }).join('') : emptyTableRow(8, 'Sin facturas que coincidan con la busqueda.');
+}
+
+function bindConfigSearches() {
+  document.querySelectorAll('[data-config-search]').forEach(input => {
+    input.addEventListener('input', event => {
+      const kind = event.target.dataset.configSearch;
+      state.configFilters[kind] = event.target.value || '';
+      if (kind === 'clients') renderClientsTable();
+      if (kind === 'services') renderServicesTable();
+      if (kind === 'users') renderUsersTable();
+      if (kind === 'invoices') renderInvoicesTable();
+    });
+  });
 }
 
 function openDeleteInvoiceModal(invoiceId) {
@@ -1393,6 +1439,7 @@ async function init() {
   qs('#newClientBtn').addEventListener('click', clearClientForm);
   qs('#newServiceBtn').addEventListener('click', clearServiceForm);
   qs('#newUserBtn').addEventListener('click', clearUserForm);
+  bindConfigSearches();
   window.addEventListener('beforeprint', () => {
     updatePrintTexts();
     syncNotesPrintState();

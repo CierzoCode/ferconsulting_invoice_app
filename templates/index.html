@@ -206,6 +206,7 @@
           <label>Envio por defecto<select id="clientDeliveryEdit"><option value="">Sin preferencia</option><option value="email">Email</option><option value="postal">Correo postal</option></select></label>
           <div class="form-actions"><button class="btn primary" type="submit">Guardar cliente</button><button class="btn secondary" id="newClientBtn" type="button">Nuevo</button></div>
         </form>
+        <label class="table-search">Buscar clientes<input id="clientsSearch" class="config-search-input" data-config-search="clients" placeholder="Nombre, CIF, ciudad, email..." autocomplete="off" /></label>
         <div class="table-wrap"><table class="config-table clients-config-table"><thead><tr><th>Nombre</th><th>CIF</th><th>C.P.</th><th>Ciudad</th><th>Email</th><th>Pago por defecto</th><th>Envio por defecto</th><th></th></tr></thead><tbody id="clientsTable"></tbody></table></div>
       </section>
 
@@ -219,6 +220,7 @@
           <label>Activo<select id="serviceActiveEdit"><option value="true">Si</option><option value="false">No</option></select></label>
           <div class="form-actions"><button class="btn primary" type="submit">Guardar servicio</button><button class="btn secondary" id="newServiceBtn" type="button">Nuevo</button></div>
         </form>
+        <label class="table-search">Buscar servicios<input id="servicesSearch" class="config-search-input" data-config-search="services" placeholder="Servicio, codigo, unidad, precio..." autocomplete="off" /></label>
         <div class="table-wrap"><table class="config-table"><thead><tr><th>Servicio</th><th>Unidad</th><th>Precio</th><th>Activo</th><th></th></tr></thead><tbody id="servicesTable"></tbody></table></div>
       </section>
 
@@ -232,10 +234,12 @@
           <label>Activo<select id="userActiveEdit"><option value="true">Si</option><option value="false">No</option></select></label>
           <div class="form-actions"><button class="btn primary" type="submit">Guardar usuario</button><button class="btn secondary" id="newUserBtn" type="button">Nuevo</button></div>
         </form>
+        <label class="table-search">Buscar usuarios<input id="usersSearch" class="config-search-input" data-config-search="users" placeholder="Usuario, email, rol..." autocomplete="off" /></label>
         <div class="table-wrap"><table class="config-table"><thead><tr><th>Usuario</th><th>Email envio</th><th>Rol</th><th>Activo</th><th></th></tr></thead><tbody id="usersTable"></tbody></table></div>
       </section>
 
       <section class="config-panel" id="invoicesPanel">
+        <label class="table-search">Buscar facturas<input id="invoicesSearch" class="config-search-input" data-config-search="invoices" placeholder="Documento, cliente, estado, total..." autocomplete="off" /></label>
         <div class="table-wrap"><table class="config-table"><thead><tr><th>Documento</th><th>Tipo</th><th>Cliente</th><th>Pago</th><th>Envio</th><th>Estado</th><th>Total</th><th></th></tr></thead><tbody id="invoicesTable"></tbody></table></div>
       </section>
     </main>
