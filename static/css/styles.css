@@ -28,6 +28,7 @@ h1 { margin: 0; font-size: clamp(28px, 4vw, 44px); }
 .btn.primary { background: var(--accent-dark); color: white; }
 .btn.secondary { background: white; color: var(--accent-dark); border: 1px solid var(--line); }
 .btn.compact { padding: 11px 14px; }
+.nav-link { text-decoration: none; display: inline-flex; align-items: center; justify-content: center; }
 .global-nav .btn.active { background: var(--accent-dark); color: #fff; border-color: var(--accent-dark); }
 .btn:disabled { opacity: .6; cursor: wait; }
 .layout { display: grid; grid-template-columns: minmax(760px, 1fr) 320px; gap: 24px; align-items: start; }
@@ -97,6 +98,12 @@ dt { color: var(--muted); } dd { margin: 0; font-weight: 800; text-align: right;
 .login-overlay.hidden { display: none; }
 .login-card { width: min(420px, 100%); background: #fff; border: 1px solid var(--line); border-radius: 8px; box-shadow: var(--shadow); padding: 24px; display: grid; gap: 14px; }
 .login-card img { width: 210px; background: var(--accent); border-radius: 8px; padding: 12px; }
+.company-login-mark, .company-invoice-mark { display: grid; place-items: center; background: var(--accent-dark); color: #fff; border-radius: 8px; font-weight: 900; letter-spacing: .08em; }
+.company-login-mark { width: 112px; height: 84px; font-size: 30px; }
+.company-invoice-mark { width: 100%; min-height: 120px; text-align: center; font-size: clamp(18px, 3vw, 30px); line-height: 1.05; }
+.login-card .lasheras-login-logo { width: 190px; max-height: 120px; object-fit: contain; background: #fff; padding: 0; }
+.company-fincas-lasheras-blanco .logo-block { background: #fff; border: 1px solid var(--line); justify-content: center; }
+.lasheras-invoice-logo { width: 100%; max-height: 150px; object-fit: contain; }
 .login-card h1 { font-size: 30px; }
 .login-card label, .editor-grid label, .notes-block { display: grid; gap: 6px; font-weight: 800; color: var(--muted); }
 .confirm-overlay { position: fixed; inset: 0; background: rgba(30, 37, 24, .72); z-index: 25; display: grid; place-items: center; padding: 24px; }
@@ -144,6 +151,16 @@ dt { color: var(--muted); } dd { margin: 0; font-weight: 800; text-align: right;
 .voice-status { border: 1px solid var(--line); border-radius: 8px; padding: 12px; background: #f3f6ed; font-weight: 800; color: var(--accent-dark); }
 .voice-transcript { min-height: 54px; border: 1px dashed var(--line); border-radius: 8px; padding: 12px; color: var(--muted); }
 .voice-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+.company-home { min-height: 100vh; display: grid; place-items: center; padding: 24px; }
+.company-home-card { width: min(920px, 100%); background: #fff; border: 1px solid var(--line); border-radius: 12px; box-shadow: var(--shadow); padding: clamp(24px, 5vw, 52px); }
+.company-home-card > .muted { max-width: 680px; margin: 12px 0 28px; font-size: 17px; }
+.company-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; }
+.company-choice { display: flex; align-items: center; gap: 16px; min-height: 128px; padding: 22px; color: var(--ink); text-decoration: none; border: 1px solid var(--line); border-radius: 10px; background: #fafbf8; transition: transform .18s ease, border-color .18s ease, box-shadow .18s ease; }
+.company-choice:hover, .company-choice:focus { transform: translateY(-2px); border-color: var(--accent-dark); box-shadow: var(--shadow); outline: none; }
+.company-choice-mark { flex: 0 0 64px; height: 64px; display: grid; place-items: center; border-radius: 50%; background: var(--accent-dark); color: #fff; font-size: 26px; font-weight: 900; }
+.company-choice strong, .company-choice small { display: block; }
+.company-choice strong { font-size: 18px; }
+.company-choice small { margin-top: 6px; color: var(--muted); }
 @media (max-width: 1120px) {
   .layout { grid-template-columns: 1fr; }
   .side-panel { grid-template-columns: repeat(3, 1fr); }
@@ -155,7 +172,7 @@ dt { color: var(--muted); } dd { margin: 0; font-weight: 800; text-align: right;
   .toolbar { display: grid; grid-template-columns: 1fr; align-items: stretch; gap: 14px; }
   .toolbar-main h1 { font-size: 26px; }
   .toolbar-main .muted { margin: 6px 0 0; overflow-wrap: anywhere; }
-  .global-nav { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+  .global-nav { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
   .global-nav .btn { width: 100%; padding: 11px 8px; }
   .invoice-header { grid-template-columns: 1fr; display: grid; }
   .invoice-title { text-align: left; }
@@ -178,6 +195,9 @@ dt { color: var(--muted); } dd { margin: 0; font-weight: 800; text-align: right;
   .toolbar-main h1 { font-size: 23px; }
   .eyebrow { font-size: 10px; }
   .btn { padding: 11px 12px; }
+  .company-grid { grid-template-columns: 1fr; }
+  .company-choice { min-height: 104px; }
+  .global-nav { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .invoice-card, .config-view, .panel-card { border-radius: 6px; }
   .logo-block { min-height: 86px; padding: 12px; }
   .invoice-title h2 { font-size: 34px; margin-bottom: 12px; }

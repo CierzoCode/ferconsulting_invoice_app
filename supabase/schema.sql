@@ -30,6 +30,7 @@ create index if not exists clients_name_idx on public.clients using gin (to_tsve
 
 alter table public.clients add column if not exists default_payment_method text;
 alter table public.clients add column if not exists default_delivery_method text;
+alter table public.clients add column if not exists country_code text;
 
 create table if not exists public.proforma_counters (
   year integer primary key,

@@ -3,14 +3,14 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Ferconsulting - Facturacion</title>
+  <title>{{ company.name }} - Facturacion</title>
   <link rel="stylesheet" href="{{ url_for('static', path='/css/styles.css') }}" />
 </head>
-<body>
+<body class="company-{{ company_slug }}">
   <div class="login-overlay" id="loginOverlay">
     <form class="login-card" id="loginForm">
-      <img src="{{ url_for('static', path='/img/ferconsulting_logo.png') }}" alt="Ferconsulting" />
-      <h1>Acceso</h1>
+      {% if company_slug == 'fer-consulting' %}<img src="{{ url_for('static', path='/img/ferconsulting_logo.png') }}" alt="Fer-consulting" />{% else %}<img class="lasheras-login-logo" src="{{ url_for('static', path='/img/fincas_lasheras_logo.png') }}" alt="Fincas Lasheras Blanco" />{% endif %}
+      <h1>Acceso a {{ company.name }}</h1>
       <label>Usuario<input id="loginUser" autocomplete="username" /></label>
       <label>Contrasena<input id="loginPassword" type="password" autocomplete="current-password" /></label>
       <button class="btn primary" type="submit">Entrar</button>
@@ -21,12 +21,13 @@
   <div class="app-shell">
     <header class="toolbar no-print">
       <div class="toolbar-main">
-        <p class="eyebrow">Factura Ferconsulting 2026</p>
+        <p class="eyebrow">{{ company.name }} · Facturacion</p>
         <h1>Generador de facturas</h1>
       </div>
       <nav class="toolbar-actions global-nav" aria-label="Navegacion principal">
         <button class="btn secondary active" id="invoiceViewBtn" type="button">Factura</button>
         <button class="btn secondary" id="configViewBtn" type="button">Configuracion</button>
+        <a class="btn secondary nav-link" href="/">Empresas</a>
         <button class="btn secondary" id="logoutBtn" type="button">Salir</button>
       </nav>
     </header>
@@ -47,14 +48,14 @@
 
         <div class="invoice-header">
           <div class="logo-block">
-            <img src="{{ url_for('static', path='/img/ferconsulting_logo.png') }}" alt="Ferconsulting" />
+            {% if company_slug == 'fer-consulting' %}<img src="{{ url_for('static', path='/img/ferconsulting_logo.png') }}" alt="Fer-consulting" />{% else %}<img class="lasheras-invoice-logo" src="{{ url_for('static', path='/img/fincas_lasheras_logo.png') }}" alt="Fincas Lasheras Blanco" />{% endif %}
           </div>
           <div class="company-header-info">
-            <strong>FERCONSULTING AGROTECH S.L.</strong>
-            <span>CIF B19827476</span>
-            <span>Puerta de la Villa S/N, 50280 Calatorao (Zaragoza)</span>
-            <span>ferconsulting@asesoragricola.com</span>
-            <span>asesoragricola.com</span>
+            <strong>{{ company.legal_name }}</strong>
+            <span>CIF {{ company.tax_id }}</span>
+            <span>{{ company.address }}</span>
+            {% if company.email %}<span>{{ company.email }}</span>{% endif %}
+            {% if company.website %}<span>{{ company.website }}</span>{% endif %}
           </div>
         </div>
 
@@ -94,7 +95,7 @@
             <label>C.P. / Ciudad:</label><output id="clientCity"></output>
             <label>Pago:</label>
             <select id="paymentMethodInput">
-              <option value="TRANSFERENCIA ES15 2100 3586 5022 0012 1937 LA CAIXA">Transferencia</option>
+              <option value="TRANSFERENCIA {{ company.bank_transfer }}">Transferencia</option>
               <option value="GIRO">Giro</option>
             </select>
             <label>Envio:</label>
@@ -132,16 +133,18 @@
         </div>
 
         <div class="payment-block">
-          <p><strong>FORMA DE PAGO:</strong> <span id="paymentMethodText">TRANSFERENCIA ES15 2100 3586 5022 0012 1937 LA CAIXA</span></p>
+          <p><strong>FORMA DE PAGO:</strong> <span id="paymentMethodText">TRANSFERENCIA {{ company.bank_transfer }}</span></p>
           <p><strong>ENVIO:</strong> <span id="deliveryMethodText">Email</span></p>
-          <p class="web-link">Visite nuestra web: asesoragricola.com</p>
+          {% if company.website %}<p class="web-link">Visite nuestra web: {{ company.website }}</p>{% endif %}
         </div>
 
         <footer class="invoice-footer">
-          <img src="{{ url_for('static', path='/img/agricultura_smart.png') }}" alt="Agricultura Smart" />
-          <p>INSCRITA EN EL REGISTRO MERCANTIL DE ZARAGOZA, FOLIO ELECTRONICO 1000426422459, HOJA Z-74459, INSCRIPCION 1</p>
-          <p class="legal">De conformidad con lo establecido en la normativa vigente en Proteccion de Datos de Caracter Personal, le informamos que sus datos seran incorporados al sistema de tratamiento titularidad de FERCONSULTING AGROTECH S.L con CIF B19827476 y domicilio social sito en Puerta de la Villa sn, 50280 Calatorao (Zaragoza), con la finalidad de poder remitirle la correspondiente factura. Podra ejercer los derechos de acceso, rectificacion, limitacion de tratamiento, supresion, portabilidad y oposicion/revocacion dirigiendo su peticion a la direccion postal Puerta de la Villa sn, 50280 Calatorao (Zaragoza) o a traves de correo electronico ferconsulting@asesoragricola.com.</p>
-          <p class="company-line">Ferconsulting Agrotech S.L. | B19827476 | Puerta de la Villa S/N, Calatorao (Zaragoza), C.P.: 50280 | ferconsulting@asesoragricola.com</p>
+          {% if company_slug == 'fer-consulting' %}<img src="{{ url_for('static', path='/img/agricultura_smart.png') }}" alt="Agricultura Smart" />
+          <p>INSCRITA EN EL REGISTRO MERCANTIL DE ZARAGOZA, FOLIO ELECTRONICO 1000426422459, HOJA Z-74459, INSCRIPCION 1</p>{% else %}
+          <p>Empresa inscrita en el Registro Oficial de Establecimientos y Servicios de Plaguicidas con el nº Z-0084.</p>
+          <p>Inscrita en el Registro Mercantil de Zaragoza, Tomo 1989, Libro 0, Folio 48, Hoja Z-19356. Número de registro sanitario 21.025226/Z.</p>{% endif %}
+          <p class="legal">De conformidad con la normativa vigente en Proteccion de Datos de Caracter Personal, sus datos seran incorporados al sistema de tratamiento titularidad de {{ company.legal_name }}, con CIF {{ company.tax_id }} y domicilio social en {{ company.address }}, con la finalidad de emitir y gestionar la correspondiente factura. Podra ejercer sus derechos dirigiendo su peticion a dicho domicilio{% if company.email %} o al correo {{ company.email }}{% endif %}.</p>
+          <p class="company-line">{{ company.legal_name }} | {{ company.tax_id }} | {{ company.address }}{% if company.phone %} | {{ company.phone }}{% endif %}{% if company.email %} | {{ company.email }}{% endif %}</p>
         </footer>
       </section>
 
@@ -202,7 +205,7 @@
           <label>C.P.<input id="clientPostalEdit" /></label>
           <label>Ciudad<input id="clientCityEdit" /></label>
           <label>Email<input id="clientEmailEdit" type="email" /></label>
-          <label>Pago por defecto<select id="clientPaymentEdit"><option value="">Sin preferencia</option><option value="TRANSFERENCIA ES15 2100 3586 5022 0012 1937 LA CAIXA">Transferencia</option><option value="GIRO">Giro</option></select></label>
+          <label>Pago por defecto<select id="clientPaymentEdit"><option value="">Sin preferencia</option><option value="TRANSFERENCIA {{ company.bank_transfer }}">Transferencia</option><option value="GIRO">Giro</option></select></label>
           <label>Envio por defecto<select id="clientDeliveryEdit"><option value="">Sin preferencia</option><option value="email">Email</option><option value="postal">Correo postal</option></select></label>
           <div class="form-actions"><button class="btn primary" type="submit">Guardar cliente</button><button class="btn secondary" id="newClientBtn" type="button">Nuevo</button></div>
         </form>
@@ -278,6 +281,7 @@
       </div>
     </div>
   </section>
+  <script>window.APP_COMPANY = {{ company_slug | tojson }};</script>
   <script src="{{ url_for('static', path='/js/app.js') }}"></script>
 </body>
 </html>

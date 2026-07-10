@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Facturacion - Seleccionar empresa</title>
+  <link rel="stylesheet" href="{{ url_for('static', path='/css/styles.css') }}" />
+</head>
+<body class="company-home">
+  <main class="company-home-card">
+    <p class="eyebrow">Facturacion</p>
+    <h1>Selecciona una empresa</h1>
+    <p class="muted">Cada acceso utiliza sus propios clientes, servicios, usuarios, numeracion e historico de facturas.</p>
+    <nav class="company-grid" aria-label="Empresas disponibles">
+      {% for item in companies %}
+      <a class="company-choice" href="/{{ item.slug }}">
+        <span class="company-choice-mark">{{ item.name[:1] }}</span>
+        <span><strong>{{ item.name }}</strong><small>Entrar en facturacion</small></span>
+      </a>
+      {% endfor %}
+    </nav>
+  </main>
+</body>
+</html>

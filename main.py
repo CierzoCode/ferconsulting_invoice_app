@@ -6,6 +6,7 @@ import base64
 import hashlib
 import hmac
 import secrets
+from contextvars import ContextVar
 from copy import deepcopy
 from datetime import date, datetime, timedelta
 from pathlib import Path
@@ -25,37 +26,116 @@ except Exception:
     pass
 
 BASE_DIR = Path(__file__).resolve().parent
-DATA_DIR = BASE_DIR / "data"
 
 app = FastAPI(title="Ferconsulting Facturación", version="1.0.0")
 app.mount("/static", StaticFiles(directory=BASE_DIR / "static"), name="static")
 templates = Jinja2Templates(directory=str(BASE_DIR / "templates"))
 
+COMPANIES = {
+    "fer-consulting": {
+        "slug": "fer-consulting",
+        "name": "Fer-consulting",
+        "table_prefix": "",
+        "legal_name": "FERCONSULTING AGROTECH S.L.",
+        "trade_name": "Fer-consulting",
+        "tax_id": "B19827476",
+        "address": "Puerta de la Villa S/N, 50280 Calatorao (Zaragoza)",
+        "email": "ferconsulting@asesoragricola.com",
+        "website": "asesoragricola.com",
+        "bank_transfer": "ES15 2100 3586 5022 0012 1937 LA CAIXA",
+        "fiscal_year": 2026,
+        "invoice_prefix": "FAC-",
+        "proforma_prefix": "PRO-",
+        "vat_rate": 0.21,
+    },
+    "fincas-lasheras-blanco": {
+        "slug": "fincas-lasheras-blanco",
+        "name": "FINCAS LASHERAS BLANCO S.L.",
+        "table_prefix": "lasheras_",
+        "legal_name": "FINCAS LASHERAS BLANCO S.L.",
+        "trade_name": "Fincas Lasheras Blanco",
+        "tax_id": "B50696764",
+        "address": "C/ Capilla nº 3, 50280 Calatorao (Zaragoza)",
+        "email": "fertijalon@fertijalon.com",
+        "website": "",
+        "bank_transfer": "ES52 0128 7655 5505 0000 8625",
+        "phone": "976 813666 - 616 901070",
+        "fiscal_year": 2026,
+        "invoice_prefix": "FAC-",
+        "proforma_prefix": "PRO-",
+        "vat_rate": 0.21,
+    },
+}
+DEFAULT_COMPANY_SLUG = "fer-consulting"
+company_context: ContextVar[str] = ContextVar("company_slug", default=DEFAULT_COMPANY_SLUG)
 
-def read_json(name: str, default: Any) -> Any:
-    path = DATA_DIR / name
-    if not path.exists():
-        return deepcopy(default)
-    return json.loads(path.read_text(encoding="utf-8"))
+
+def current_company_slug() -> str:
+    return company_context.get()
 
 
-def write_json(name: str, payload: Any) -> None:
-    path = DATA_DIR / name
-    path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
+def company_definition(slug: Optional[str] = None) -> dict[str, str]:
+    return COMPANIES.get(slug or current_company_slug(), COMPANIES[DEFAULT_COMPANY_SLUG])
 
 
-SETTINGS = read_json("settings.json", {})
+def table_name(name: str) -> str:
+    return f"{company_definition()['table_prefix']}{name}"
+
+
+@app.middleware("http")
+async def select_company_context(request: Request, call_next):
+    first_path_part = request.url.path.strip("/").split("/", 1)[0]
+    requested = first_path_part if first_path_part in COMPANIES else request.headers.get("x-company", "").strip().casefold()
+    requested = requested or DEFAULT_COMPANY_SLUG
+    if requested not in COMPANIES:
+        return JSONResponse(status_code=400, content={"detail": "Empresa no valida."})
+    token = company_context.set(requested)
+    try:
+        return await call_next(request)
+    finally:
+        company_context.reset(token)
+
+
+SETTINGS = {
+    "fiscal_year": COMPANIES[DEFAULT_COMPANY_SLUG]["fiscal_year"],
+    "invoice_prefix": COMPANIES[DEFAULT_COMPANY_SLUG]["invoice_prefix"],
+    "proforma_prefix": COMPANIES[DEFAULT_COMPANY_SLUG]["proforma_prefix"],
+    "vat_rate": COMPANIES[DEFAULT_COMPANY_SLUG]["vat_rate"],
+    "default_payment_method": f"TRANSFERENCIA {COMPANIES[DEFAULT_COMPANY_SLUG]['bank_transfer']}",
+}
 COMPANY = SETTINGS.get("company", {})
 VAT_RATE = float(SETTINGS.get("vat_rate", 0.21))
 SESSION_COOKIE = "fer_session"
 SESSION_MAX_AGE_SECONDS = int(os.getenv("SESSION_MAX_AGE_SECONDS", "28800"))
 SESSION_SECRET = os.getenv("SESSION_SECRET") or os.getenv("SECRET_KEY") or "dev-ferconsulting-change-me"
 HASH_PREFIX = "pbkdf2_sha256"
-VALID_PAYMENT_METHODS = {"", "TRANSFERENCIA ES15 2100 3586 5022 0012 1937 LA CAIXA", "GIRO"}
 VALID_DELIVERY_METHODS = {"", "email", "postal"}
 VALID_ROLES = {"admin", "gestor", "lectura"}
 DEFAULT_ADMIN_PASSWORD = os.getenv("DEFAULT_ADMIN_PASSWORD", "Cambia-Admin-2026!")
 DEFAULT_NEW_USER_PASSWORD = os.getenv("DEFAULT_NEW_USER_PASSWORD", "Cambia-Usuario-2026!")
+
+
+def is_valid_payment_method(value: str) -> bool:
+    return value in {"", "GIRO"} or value.startswith("TRANSFERENCIA ")
+
+
+def current_settings() -> dict[str, Any]:
+    company = company_definition()
+    return {
+        "fiscal_year": company["fiscal_year"],
+        "invoice_prefix": company["invoice_prefix"],
+        "proforma_prefix": company["proforma_prefix"],
+        "vat_rate": company["vat_rate"],
+        "default_payment_method": f"TRANSFERENCIA {company['bank_transfer']}",
+    }
+
+
+def current_company() -> dict[str, Any]:
+    return company_definition()
+
+
+def session_cookie_name() -> str:
+    return f"{SESSION_COOKIE}_{current_company_slug().replace('-', '_')}"
 
 
 class InvoiceItemIn(BaseModel):
@@ -146,7 +226,7 @@ class InvoiceIn(BaseModel):
     @classmethod
     def valid_payment_method(cls, value):
         value = (value or "").strip()
-        if value not in VALID_PAYMENT_METHODS:
+        if not is_valid_payment_method(value):
             raise ValueError("Metodo de pago no valido.")
         return value
 
@@ -205,7 +285,7 @@ class ClientIn(BaseModel):
     @field_validator("default_payment_method")
     @classmethod
     def valid_default_payment_method(cls, value):
-        if value not in VALID_PAYMENT_METHODS:
+        if not is_valid_payment_method(value):
             raise ValueError("Metodo de pago no valido.")
         return value
 
@@ -333,55 +413,26 @@ def default_admin_user() -> dict[str, Any]:
         "id": 1,
         "username": "Admin",
         "password": hash_password(DEFAULT_ADMIN_PASSWORD),
-        "email": SETTINGS.get("company", {}).get("email", ""),
+        "email": current_company().get("email", ""),
         "role": "admin",
         "active": True,
     }
 
 
 def load_clients() -> list[dict[str, Any]]:
-    store = globals().get("supabase_store")
-    if store and store.available():
-        try:
-            return store.list_clients()
-        except Exception:
-            return read_json("clients.json", [])
-    return read_json("clients.json", [])
+    return require_supabase().list_clients()
 
 
 def load_services() -> list[dict[str, Any]]:
-    store = globals().get("supabase_store")
-    if store and store.available():
-        try:
-            return store.list_services()
-        except Exception:
-            return read_json("services.json", [])
-    return read_json("services.json", [])
+    return require_supabase().list_services()
 
 
 def load_client_prices() -> list[dict[str, Any]]:
-    store = globals().get("supabase_store")
-    if store and store.available():
-        try:
-            return store.list_client_prices()
-        except Exception:
-            return read_json("client_prices.json", [])
-    return read_json("client_prices.json", [])
+    return require_supabase().list_client_prices()
 
 
 def load_users() -> list[dict[str, Any]]:
-    store = globals().get("supabase_store")
-    if store and store.available():
-        try:
-            return store.list_users()
-        except Exception:
-            return read_json("users.json", [default_admin_user()])
-    users = read_json("users.json", [])
-    if users:
-        return users
-    users = [default_admin_user()]
-    write_json("users.json", users)
-    return users
+    return require_supabase().list_users()
 
 
 def authenticate_user(username: str, password: str, require_admin: bool = False) -> dict[str, Any]:
@@ -404,10 +455,7 @@ def migrate_user_password(user: dict[str, Any], password: str) -> None:
     data = {**user, "password": hash_password(password)}
     user_id = int(user.get("id") or 0)
     try:
-        if supabase_store.available():
-            supabase_store.save_user(data, user_id)
-        else:
-            upsert_json_row("users.json", data, user_id)
+        require_supabase().save_user(data, user_id)
     except Exception:
         pass
 
@@ -422,6 +470,7 @@ def create_session_token(user: dict[str, Any]) -> str:
         "uid": user.get("id"),
         "username": user.get("username"),
         "role": user.get("role", "admin"),
+        "company": current_company_slug(),
         "exp": expires_at,
     }
     payload_b64 = base64.urlsafe_b64encode(json.dumps(payload, separators=(",", ":")).encode()).decode()
@@ -446,10 +495,12 @@ def public_user(user: dict[str, Any]) -> dict[str, Any]:
 
 
 def current_user(request: Request) -> dict[str, Any]:
-    token = request.cookies.get(SESSION_COOKIE)
+    token = request.cookies.get(session_cookie_name())
     if not token:
         raise HTTPException(status_code=401, detail="Inicia sesion.")
     session = decode_session_token(token)
+    if session.get("company") != current_company_slug():
+        raise HTTPException(status_code=401, detail="La sesion pertenece a otra empresa.")
     for user in load_users():
         if str(user.get("id")) == str(session.get("uid")) and user.get("active", True):
             return user
@@ -485,135 +536,29 @@ def audit_log(action: str, user: Optional[dict[str, Any]], request: Optional[Req
         "created_at": datetime.utcnow().isoformat() + "Z",
     }
     try:
-        if supabase_store.available():
-            supabase_store.write_audit_log(entry)
-        else:
-            rows = read_json("audit_log.json", [])
-            rows.append(entry)
-            write_json("audit_log.json", rows[-1000:])
+        require_supabase().write_audit_log(entry)
     except Exception:
         pass
 
 
-def next_id(rows: list[dict[str, Any]]) -> int:
-    return max([int(row.get("id") or 0) for row in rows] or [0]) + 1
-
-
-def upsert_json_row(filename: str, payload: dict[str, Any], row_id: Optional[int] = None) -> dict[str, Any]:
-    rows = read_json(filename, [])
-    if row_id is None:
-        payload["id"] = next_id(rows)
-        rows.append(payload)
-    else:
-        for index, row in enumerate(rows):
-            if int(row.get("id") or 0) == int(row_id):
-                payload["id"] = row_id
-                rows[index] = {**row, **payload}
-                break
-        else:
-            raise HTTPException(status_code=404, detail="Registro no encontrado.")
-    write_json(filename, rows)
-    return payload
-
-
-def delete_json_row(filename: str, row_id: int) -> dict[str, Any]:
-    rows = read_json(filename, [])
-    remaining = [row for row in rows if int(row.get("id") or 0) != int(row_id)]
-    if len(remaining) == len(rows):
-        raise HTTPException(status_code=404, detail="Registro no encontrado.")
-    write_json(filename, remaining)
-    return {"ok": True}
-
-
-def same_key(left: Any, right: Any) -> bool:
-    return str(left or "").strip().casefold() == str(right or "").strip().casefold()
-
-
 def update_client_price_history(client: ClientSnapshot, items: list[dict[str, Any]]) -> None:
-    store = globals().get("supabase_store")
-    if store and store.available():
-        store.upsert_client_prices(client, items)
-        return
-    prices = load_client_prices()
-    now = datetime.utcnow().isoformat() + "Z"
-    for item in items:
-        if not item.get("description") or float(item.get("unit_price") or 0) <= 0:
-            continue
-        matched_index = None
-        for index, row in enumerate(prices):
-            same_client = (
-                client.id is not None and row.get("client_id") == client.id
-            ) or (
-                client.id is None and same_key(row.get("client_name"), client.name)
-            )
-            same_service = (
-                item.get("service_id") is not None and row.get("service_id") == item.get("service_id")
-            ) or (
-                item.get("service_id") is None and same_key(row.get("service_name"), item.get("description"))
-            )
-            if same_client and same_service:
-                matched_index = index
-                break
-        payload = {
-            "id": prices[matched_index]["id"] if matched_index is not None else next_id(prices),
-            "client_id": client.id,
-            "client_name": client.name,
-            "service_id": item.get("service_id"),
-            "service_name": item.get("description"),
-            "unit": item.get("unit", ""),
-            "unit_price": money(item.get("unit_price") or 0),
-            "updated_at": now,
-        }
-        if matched_index is None:
-            prices.append(payload)
-        else:
-            prices[matched_index] = {**prices[matched_index], **payload}
-    write_json("client_prices.json", prices)
+    require_supabase().upsert_client_prices(client, items)
 
 
 def next_invoice_preview() -> dict[str, Any]:
-    store = globals().get("supabase_store")
-    if store and store.available():
-        fiscal_year = int(SETTINGS.get("fiscal_year", date.today().year))
-        try:
-            return store.preview_invoice_number(fiscal_year)
-        except Exception:
-            pass
-    settings = read_json("settings.json", SETTINGS)
+    settings = current_settings()
     fiscal_year = int(settings.get("fiscal_year", date.today().year))
-    prefix = settings.get("invoice_prefix", "FAC-")
-    sequence = int(settings.get("next_invoice_sequence", 1))
-    return {
-        "fiscal_year": fiscal_year,
-        "prefix": prefix,
-        "sequence": sequence,
-        "invoice_number": f"{prefix}{fiscal_year}.{sequence}",
-    }
+    return require_supabase().preview_invoice_number(fiscal_year)
 
 
 def next_proforma_preview() -> dict[str, Any]:
-    fiscal_year = int(SETTINGS.get("fiscal_year", date.today().year))
-    store = globals().get("supabase_store")
-    if store and store.available():
-        try:
-            return store.preview_proforma_number(fiscal_year)
-        except Exception:
-            pass
-    settings = read_json("settings.json", SETTINGS)
-    prefix = settings.get("proforma_prefix", "PRO-")
-    sequence = int(settings.get("next_proforma_sequence", 1))
-    return {
-        "proforma_prefix": prefix,
-        "proforma_sequence": sequence,
-        "proforma_number": f"{prefix}{fiscal_year}.{sequence}",
-    }
+    settings = current_settings()
+    fiscal_year = int(settings.get("fiscal_year", date.today().year))
+    return require_supabase().preview_proforma_number(fiscal_year)
 
 
 def load_invoices_safe() -> list[dict[str, Any]]:
-    try:
-        return active_store().list_invoices()
-    except Exception:
-        return read_json("local_invoices.json", [])
+    return require_supabase().list_invoices()
 
 
 def calculate_invoice(payload: InvoiceIn) -> dict[str, Any]:
@@ -651,107 +596,12 @@ def calculate_invoice(payload: InvoiceIn) -> dict[str, Any]:
     }
 
 
-class LocalStore:
-    def reserve_invoice_number(self, fiscal_year: int) -> dict[str, Any]:
-        settings = read_json("settings.json", SETTINGS)
-        prefix = settings.get("invoice_prefix", "FAC-")
-        sequence = int(settings.get("next_invoice_sequence", 1))
-        return {"sequence": sequence, "invoice_number": f"{prefix}{fiscal_year}.{sequence}"}
-
-    def reserve_proforma_number(self, fiscal_year: int) -> dict[str, Any]:
-        settings = read_json("settings.json", SETTINGS)
-        prefix = settings.get("proforma_prefix", "PRO-")
-        sequence = int(settings.get("next_proforma_sequence", 1))
-        settings["next_proforma_sequence"] = sequence + 1
-        write_json("settings.json", settings)
-        return {"sequence": sequence, "invoice_number": f"{prefix}{fiscal_year}.{sequence}", "prefix": prefix, "fiscal_year": fiscal_year}
-
-    def commit_sequence(self, sequence: int) -> None:
-        settings = read_json("settings.json", SETTINGS)
-        settings["next_invoice_sequence"] = int(sequence) + 1
-        write_json("settings.json", settings)
-
-    def set_invoice_counter(self, payload: InvoiceCounterIn) -> dict[str, Any]:
-        settings = read_json("settings.json", SETTINGS)
-        settings["fiscal_year"] = payload.fiscal_year
-        settings["invoice_prefix"] = payload.prefix
-        settings["next_invoice_sequence"] = payload.next_sequence
-        write_json("settings.json", settings)
-        return {
-            "fiscal_year": payload.fiscal_year,
-            "prefix": payload.prefix,
-            "sequence": payload.next_sequence,
-            "invoice_number": f"{payload.prefix}{payload.fiscal_year}.{payload.next_sequence}",
-        }
-
-    def save_invoice(self, invoice: dict[str, Any]) -> dict[str, Any]:
-        invoices = read_json("local_invoices.json", [])
-        invoices.append(invoice)
-        write_json("local_invoices.json", invoices)
-        return invoice
-
-    def list_invoices(self) -> list[dict[str, Any]]:
-        return list(reversed([invoice for invoice in read_json("local_invoices.json", []) if not invoice.get("deleted_at")]))
-
-    def get_invoice(self, invoice_id: str) -> dict[str, Any]:
-        for invoice in read_json("local_invoices.json", []):
-            if invoice.get("id") == invoice_id and not invoice.get("deleted_at"):
-                return invoice
-        raise HTTPException(status_code=404, detail="Factura no encontrada.")
-
-    def update_invoice(self, invoice_id: str, invoice: dict[str, Any]) -> dict[str, Any]:
-        invoices = read_json("local_invoices.json", [])
-        for index, current in enumerate(invoices):
-            if current.get("id") == invoice_id:
-                invoices[index] = {**current, **invoice, "id": invoice_id}
-                write_json("local_invoices.json", invoices)
-                return invoices[index]
-        raise HTTPException(status_code=404, detail="Factura no encontrada.")
-
-    def update_invoice_status(self, invoice_id: str, status: str) -> dict[str, Any]:
-        invoices = read_json("local_invoices.json", [])
-        for index, current in enumerate(invoices):
-            if current.get("id") == invoice_id:
-                invoices[index] = {**current, "status": status, "updated_at": datetime.utcnow().isoformat() + "Z"}
-                write_json("local_invoices.json", invoices)
-                return invoices[index]
-        raise HTTPException(status_code=404, detail="Factura no encontrada.")
-
-    def delete_invoice(self, invoice_id: str, deleted_by: Optional[int] = None) -> dict[str, Any]:
-        invoices = read_json("local_invoices.json", [])
-        for index, invoice in enumerate(invoices):
-            if invoice.get("id") == invoice_id and not invoice.get("deleted_at"):
-                invoices[index] = {
-                    **invoice,
-                    "deleted_at": datetime.utcnow().isoformat() + "Z",
-                    "deleted_by": deleted_by,
-                    "updated_at": datetime.utcnow().isoformat() + "Z",
-                }
-                write_json("local_invoices.json", invoices)
-                return {"ok": True}
-        raise HTTPException(status_code=404, detail="Factura no encontrada.")
-
-    def update_client_defaults(self, client_id: Optional[int], payment_method: str, delivery_method: str) -> None:
-        if client_id is None:
-            return
-        clients = read_json("clients.json", [])
-        for index, client in enumerate(clients):
-            if int(client.get("id") or 0) == int(client_id):
-                clients[index] = {
-                    **client,
-                    "default_payment_method": payment_method,
-                    "default_delivery_method": delivery_method,
-                }
-                write_json("clients.json", clients)
-                return
-
-
 class SupabaseStore:
     def __init__(self) -> None:
         self.url = os.getenv("SUPABASE_URL", "")
         self.key = os.getenv("SUPABASE_SERVICE_ROLE_KEY", os.getenv("SUPABASE_KEY", ""))
         self._client = None
-        self._available: Optional[bool] = None
+        self._available: dict[str, bool] = {}
 
     @property
     def configured(self) -> bool:
@@ -760,14 +610,15 @@ class SupabaseStore:
     def available(self) -> bool:
         if not self.configured:
             return False
-        if self._available is not None:
-            return self._available
+        slug = current_company_slug()
+        if slug in self._available:
+            return self._available[slug]
         try:
-            self.client().table("invoices").select("id").limit(1).execute()
-            self._available = True
+            self.client().table(table_name("invoices")).select("id").limit(1).execute()
+            self._available[slug] = True
         except Exception:
-            self._available = False
-        return self._available
+            self._available[slug] = False
+        return self._available[slug]
 
     def client(self):
         if self._client is None:
@@ -779,23 +630,25 @@ class SupabaseStore:
         return self._client
 
     def reserve_invoice_number(self, fiscal_year: int) -> dict[str, Any]:
-        prefix = os.getenv("INVOICE_PREFIX", SETTINGS.get("invoice_prefix", "FAC-"))
-        result = self.client().rpc("reserve_invoice_number", {"p_year": fiscal_year, "p_prefix": prefix}).execute()
+        prefix = current_settings().get("invoice_prefix", "FAC-")
+        rpc_name = "reserve_lasheras_invoice_number" if current_company_slug() == "fincas-lasheras-blanco" else "reserve_invoice_number"
+        result = self.client().rpc(rpc_name, {"p_year": fiscal_year, "p_prefix": prefix}).execute()
         data = result.data[0] if isinstance(result.data, list) else result.data
         return {"sequence": int(data["sequence"]), "invoice_number": data["invoice_number"]}
 
     def reserve_proforma_number(self, fiscal_year: int) -> dict[str, Any]:
-        prefix = os.getenv("PROFORMA_PREFIX", SETTINGS.get("proforma_prefix", "PRO-"))
+        prefix = current_settings().get("proforma_prefix", "PRO-")
+        rpc_name = "reserve_lasheras_proforma_number" if current_company_slug() == "fincas-lasheras-blanco" else "reserve_proforma_number"
         try:
-            result = self.client().rpc("reserve_proforma_number", {"p_year": fiscal_year, "p_prefix": prefix}).execute()
+            result = self.client().rpc(rpc_name, {"p_year": fiscal_year, "p_prefix": prefix}).execute()
         except Exception as exc:
             raise HTTPException(status_code=500, detail="Falta ejecutar el SQL actualizado de Supabase para activar proformas.") from exc
         data = result.data[0] if isinstance(result.data, list) else result.data
         return {"sequence": int(data["sequence"]), "invoice_number": data["invoice_number"], "prefix": prefix, "fiscal_year": fiscal_year}
 
     def preview_invoice_number(self, fiscal_year: int) -> dict[str, Any]:
-        prefix = os.getenv("INVOICE_PREFIX", SETTINGS.get("invoice_prefix", "FAC-"))
-        result = self.client().table("invoice_counters").select("next_sequence,prefix").eq("year", fiscal_year).limit(1).execute()
+        prefix = current_settings().get("invoice_prefix", "FAC-")
+        result = self.client().table(table_name("invoice_counters")).select("next_sequence,prefix").eq("year", fiscal_year).limit(1).execute()
         row = (result.data or [{}])[0]
         sequence = int(row.get("next_sequence") or 1)
         prefix = row.get("prefix") or prefix
@@ -807,9 +660,9 @@ class SupabaseStore:
         }
 
     def preview_proforma_number(self, fiscal_year: int) -> dict[str, Any]:
-        prefix = os.getenv("PROFORMA_PREFIX", SETTINGS.get("proforma_prefix", "PRO-"))
+        prefix = current_settings().get("proforma_prefix", "PRO-")
         try:
-            result = self.client().table("proforma_counters").select("next_sequence,prefix").eq("year", fiscal_year).limit(1).execute()
+            result = self.client().table(table_name("proforma_counters")).select("next_sequence,prefix").eq("year", fiscal_year).limit(1).execute()
             row = (result.data or [{}])[0]
             sequence = int(row.get("next_sequence") or 1)
             prefix = row.get("prefix") or prefix
@@ -828,7 +681,7 @@ class SupabaseStore:
             "next_sequence": payload.next_sequence,
             "updated_at": datetime.utcnow().isoformat() + "Z",
         }
-        self.client().table("invoice_counters").upsert(row, on_conflict="year").execute()
+        self.client().table(table_name("invoice_counters")).upsert(row, on_conflict="year").execute()
         return {
             "fiscal_year": payload.fiscal_year,
             "prefix": payload.prefix,
@@ -837,10 +690,24 @@ class SupabaseStore:
         }
 
     def _list_table(self, table: str, order: str = "id") -> list[dict[str, Any]]:
-        result = self.client().table(table).select("*").order(order).execute()
-        return result.data or []
+        rows: list[dict[str, Any]] = []
+        page_size = 1000
+        while True:
+            result = (
+                self.client()
+                .table(table_name(table))
+                .select("*")
+                .order(order)
+                .range(len(rows), len(rows) + page_size - 1)
+                .execute()
+            )
+            page = result.data or []
+            rows.extend(page)
+            if len(page) < page_size:
+                return rows
 
     def _upsert_table_row(self, table: str, payload: dict[str, Any], row_id: Optional[int] = None) -> dict[str, Any]:
+        table = table_name(table)
         clean_payload = deepcopy(payload)
         if row_id is None:
             inserted = self.client().table(table).insert(clean_payload).execute().data
@@ -854,13 +721,14 @@ class SupabaseStore:
         return updated[0]
 
     def _delete_table_row(self, table: str, row_id: int) -> dict[str, Any]:
+        table = table_name(table)
         deleted = self.client().table(table).delete().eq("id", row_id).execute().data
         if deleted is not None and len(deleted) == 0:
             raise HTTPException(status_code=404, detail="Registro no encontrado.")
         return {"ok": True}
 
     def write_audit_log(self, entry: dict[str, Any]) -> None:
-        self.client().table("audit_log").insert(entry).execute()
+        self.client().table(table_name("audit_log")).insert(entry).execute()
 
     def list_clients(self) -> list[dict[str, Any]]:
         return self._list_table("clients")
@@ -869,16 +737,10 @@ class SupabaseStore:
         return self._list_table("services")
 
     def list_client_prices(self) -> list[dict[str, Any]]:
-        try:
-            return self._list_table("client_prices")
-        except Exception:
-            return read_json("client_prices.json", [])
+        return self._list_table("client_prices")
 
     def list_users(self) -> list[dict[str, Any]]:
-        try:
-            users = self._list_table("users")
-        except Exception:
-            return read_json("users.json", [default_admin_user()])
+        users = self._list_table("users")
         if users:
             return users
         self._upsert_table_row("users", default_admin_user())
@@ -908,7 +770,7 @@ class SupabaseStore:
             for item in items:
                 if not item.get("description") or float(item.get("unit_price") or 0) <= 0:
                     continue
-                query = self.client().table("client_prices").select("*").limit(1)
+                query = self.client().table(table_name("client_prices")).select("*").limit(1)
                 if client.id is not None:
                     query = query.eq("client_id", client.id)
                 else:
@@ -928,44 +790,44 @@ class SupabaseStore:
                     "updated_at": now,
                 }
                 if existing:
-                    self.client().table("client_prices").update(payload).eq("id", existing[0]["id"]).execute()
+                    self.client().table(table_name("client_prices")).update(payload).eq("id", existing[0]["id"]).execute()
                 else:
-                    self.client().table("client_prices").insert(payload).execute()
+                    self.client().table(table_name("client_prices")).insert(payload).execute()
         except Exception:
             pass
 
     def save_invoice(self, invoice: dict[str, Any]) -> dict[str, Any]:
         items = invoice.pop("items")
         sb = self.client()
-        inserted = sb.table("invoices").insert(invoice).execute().data[0]
+        inserted = sb.table(table_name("invoices")).insert(invoice).execute().data[0]
         invoice_id = inserted["id"]
         for item in items:
             item["invoice_id"] = invoice_id
         if items:
-            sb.table("invoice_items").insert(items).execute()
+            sb.table(table_name("invoice_items")).insert(items).execute()
         inserted["items"] = items
         return inserted
 
     def list_invoices(self) -> list[dict[str, Any]]:
         try:
-            result = self.client().table("invoices").select("*").is_("deleted_at", "null").order("created_at", desc=True).limit(50).execute()
+            result = self.client().table(table_name("invoices")).select("*").is_("deleted_at", "null").order("created_at", desc=True).limit(50).execute()
         except Exception as exc:
             if "deleted_at" not in str(exc):
                 raise
-            result = self.client().table("invoices").select("*").order("created_at", desc=True).limit(50).execute()
+            result = self.client().table(table_name("invoices")).select("*").order("created_at", desc=True).limit(50).execute()
         return result.data or []
 
     def get_invoice(self, invoice_id: str) -> dict[str, Any]:
         try:
-            invoice_result = self.client().table("invoices").select("*").eq("id", invoice_id).is_("deleted_at", "null").limit(1).execute()
+            invoice_result = self.client().table(table_name("invoices")).select("*").eq("id", invoice_id).is_("deleted_at", "null").limit(1).execute()
         except Exception as exc:
             if "deleted_at" not in str(exc):
                 raise
-            invoice_result = self.client().table("invoices").select("*").eq("id", invoice_id).limit(1).execute()
+            invoice_result = self.client().table(table_name("invoices")).select("*").eq("id", invoice_id).limit(1).execute()
         if not invoice_result.data:
             raise HTTPException(status_code=404, detail="Factura no encontrada.")
         invoice = invoice_result.data[0]
-        items_result = self.client().table("invoice_items").select("*").eq("invoice_id", invoice_id).order("line_number").execute()
+        items_result = self.client().table(table_name("invoice_items")).select("*").eq("invoice_id", invoice_id).order("line_number").execute()
         invoice["items"] = items_result.data or []
         return invoice
 
@@ -974,19 +836,19 @@ class SupabaseStore:
         sb = self.client()
         existing = self.get_invoice(invoice_id)
         invoice["updated_at"] = datetime.utcnow().isoformat() + "Z"
-        updated = sb.table("invoices").update(invoice).eq("id", invoice_id).execute().data
+        updated = sb.table(table_name("invoices")).update(invoice).eq("id", invoice_id).execute().data
         if not updated:
             raise HTTPException(status_code=404, detail="Factura no encontrada.")
-        sb.table("invoice_items").delete().eq("invoice_id", invoice_id).execute()
+        sb.table(table_name("invoice_items")).delete().eq("invoice_id", invoice_id).execute()
         for item in items:
             item["invoice_id"] = invoice_id
         if items:
-            sb.table("invoice_items").insert(items).execute()
+            sb.table(table_name("invoice_items")).insert(items).execute()
         saved = {**existing, **updated[0], "items": items}
         return saved
 
     def update_invoice_status(self, invoice_id: str, status: str) -> dict[str, Any]:
-        updated = self.client().table("invoices").update({
+        updated = self.client().table(table_name("invoices")).update({
             "status": status,
             "updated_at": datetime.utcnow().isoformat() + "Z",
         }).eq("id", invoice_id).execute().data
@@ -996,7 +858,7 @@ class SupabaseStore:
 
     def delete_invoice(self, invoice_id: str, deleted_by: Optional[int] = None) -> dict[str, Any]:
         try:
-            deleted = self.client().table("invoices").update({
+            deleted = self.client().table(table_name("invoices")).update({
                 "deleted_at": datetime.utcnow().isoformat() + "Z",
                 "deleted_by": deleted_by,
                 "updated_at": datetime.utcnow().isoformat() + "Z",
@@ -1013,7 +875,7 @@ class SupabaseStore:
         if client_id is None:
             return
         try:
-            self.client().table("clients").update({
+            self.client().table(table_name("clients")).update({
                 "default_payment_method": payment_method,
                 "default_delivery_method": delivery_method,
                 "updated_at": datetime.utcnow().isoformat() + "Z",
@@ -1022,21 +884,42 @@ class SupabaseStore:
             pass
 
 
-local_store = LocalStore()
 supabase_store = SupabaseStore()
 
 
-def active_store():
-    return supabase_store if supabase_store.available() else local_store
+def require_supabase() -> SupabaseStore:
+    if not supabase_store.configured:
+        raise HTTPException(status_code=503, detail="Supabase no esta configurado. Revisa SUPABASE_URL y SUPABASE_SERVICE_ROLE_KEY.")
+    if not supabase_store.available():
+        company = current_company().get("name", current_company_slug())
+        raise HTTPException(status_code=503, detail=f"No se puede acceder a las tablas de Supabase para {company}. Ejecuta los SQL de esquema y revisa la conexion.")
+    return supabase_store
+
+
+def active_store() -> SupabaseStore:
+    return require_supabase()
 
 
 def storage_name() -> str:
-    return "supabase" if isinstance(active_store(), SupabaseStore) else "local-json"
+    require_supabase()
+    return "supabase"
 
 
 @app.get("/", response_class=HTMLResponse)
-def index(request: Request):
-    return templates.TemplateResponse("index.html", {"request": request, "company": COMPANY})
+def home(request: Request):
+    return templates.TemplateResponse("home.html", {"request": request, "companies": list(COMPANIES.values())})
+
+
+@app.get("/{company_slug}", response_class=HTMLResponse)
+def company_app(company_slug: str, request: Request):
+    if company_slug not in COMPANIES:
+        raise HTTPException(status_code=404, detail="Empresa no encontrada.")
+    company = current_company()
+    return templates.TemplateResponse("index.html", {
+        "request": request,
+        "company": company,
+        "company_slug": company_slug,
+    })
 
 
 @app.get("/api/session")
@@ -1046,15 +929,17 @@ def session_info(user: dict[str, Any] = Depends(current_user)):
 
 @app.post("/api/logout")
 def logout(response: Response):
-    response.delete_cookie(SESSION_COOKIE, path="/")
+    response.delete_cookie(session_cookie_name(), path="/")
     return {"ok": True}
 
 
 @app.get("/api/bootstrap")
 def bootstrap(user: dict[str, Any] = Depends(require_roles("admin", "gestor", "lectura"))):
+    settings = current_settings()
     return {
-        "company": COMPANY,
-        "settings": {**SETTINGS, **next_invoice_preview(), **next_proforma_preview()},
+        "company": current_company(),
+        "company_slug": current_company_slug(),
+        "settings": {**settings, **next_invoice_preview(), **next_proforma_preview()},
         "clients": load_clients(),
         "services": load_services(),
         "client_prices": load_client_prices(),
@@ -1068,7 +953,7 @@ def login(payload: LoginIn, response: Response, request: Request):
     user = authenticate_user(payload.username, payload.password)
     token = create_session_token(user)
     response.set_cookie(
-        SESSION_COOKIE,
+        session_cookie_name(),
         token,
         max_age=SESSION_MAX_AGE_SECONDS,
         httponly=True,
@@ -1148,8 +1033,6 @@ def create_invoice(payload: InvoiceIn, request: Request, user: dict[str, Any] = 
         "items": calculations["items"],
     }
     saved = store.save_invoice(deepcopy(invoice))
-    if isinstance(store, LocalStore) and invoice_type == "invoice":
-        store.commit_sequence(reserved["sequence"])
     store.update_client_defaults(payload.client.id, payload.payment_method, payload.delivery_method)
     update_client_price_history(payload.client, calculations["items"])
     audit_log("create", user, request, "invoice", saved.get("id"), {"invoice_number": saved.get("invoice_number")})
@@ -1163,15 +1046,11 @@ def list_invoices(user: dict[str, Any] = Depends(require_roles("admin", "gestor"
 
 @app.get("/api/invoices/{invoice_id}")
 def get_invoice(invoice_id: str, user: dict[str, Any] = Depends(require_roles("admin", "gestor", "lectura"))):
-    if False and not isinstance(active_store(), LocalStore):
-        raise HTTPException(status_code=501, detail="La edición detallada solo está implementada en modo local JSON.")
     return active_store().get_invoice(invoice_id)
 
 
 @app.put("/api/invoices/{invoice_id}")
 def update_invoice(invoice_id: str, payload: InvoiceUpdateIn, request: Request, user: dict[str, Any] = Depends(require_roles("admin", "gestor"))):
-    if False and not isinstance(active_store(), LocalStore):
-        raise HTTPException(status_code=501, detail="La edición de facturas solo está implementada en modo local JSON.")
     calculations = calculate_invoice(payload)
     if not payload.client.name.strip():
         raise HTTPException(status_code=400, detail="Selecciona un cliente antes de guardar la factura.")
@@ -1234,13 +1113,14 @@ def delete_invoice(invoice_id: str, payload: DeleteInvoiceIn, request: Request, 
 
 @app.get("/api/config")
 def config(user: dict[str, Any] = Depends(require_roles("admin", "gestor", "lectura"))):
+    settings = current_settings()
     return {
         "clients": load_clients(),
         "services": load_services(),
         "client_prices": load_client_prices(),
         "users": [public_user(user) for user in load_users()] if user.get("role") == "admin" else [],
         "invoices": load_invoices_safe(),
-        "settings": {**SETTINGS, **next_invoice_preview(), **next_proforma_preview()},
+        "settings": {**settings, **next_invoice_preview(), **next_proforma_preview()},
     }
 
 
@@ -1254,16 +1134,13 @@ def update_invoice_counter(payload: InvoiceCounterIn, request: Request, user: di
     )
     updated = active_store().set_invoice_counter(counter)
     audit_log("update", user, request, "invoice_counter", payload.fiscal_year, updated)
-    return {"settings": {**SETTINGS, **updated}, "storage": storage_name()}
+    return {"settings": {**current_settings(), **updated}, "storage": storage_name()}
 
 
 @app.post("/api/config/clients")
 def create_client(payload: ClientIn, request: Request, user: dict[str, Any] = Depends(require_roles("admin", "gestor"))):
     data = payload.model_dump(exclude_none=True)
-    if supabase_store.available():
-        saved = supabase_store.save_client(data)
-    else:
-        saved = upsert_json_row("clients.json", data)
+    saved = require_supabase().save_client(data)
     audit_log("create", user, request, "client", saved.get("id"), {"name": saved.get("name")})
     return saved
 
@@ -1271,20 +1148,14 @@ def create_client(payload: ClientIn, request: Request, user: dict[str, Any] = De
 @app.put("/api/config/clients/{client_id}")
 def update_client(client_id: int, payload: ClientIn, request: Request, user: dict[str, Any] = Depends(require_roles("admin", "gestor"))):
     data = payload.model_dump(exclude_none=True)
-    if supabase_store.available():
-        saved = supabase_store.save_client(data, client_id)
-    else:
-        saved = upsert_json_row("clients.json", data, client_id)
+    saved = require_supabase().save_client(data, client_id)
     audit_log("update", user, request, "client", client_id, {"name": saved.get("name")})
     return saved
 
 
 @app.delete("/api/config/clients/{client_id}")
 def delete_client(client_id: int, request: Request, user: dict[str, Any] = Depends(require_roles("admin"))):
-    if supabase_store.available():
-        result = supabase_store.delete_client(client_id)
-    else:
-        result = delete_json_row("clients.json", client_id)
+    result = require_supabase().delete_client(client_id)
     audit_log("delete", user, request, "client", client_id)
     return result
 
@@ -1292,10 +1163,7 @@ def delete_client(client_id: int, request: Request, user: dict[str, Any] = Depen
 @app.post("/api/config/services")
 def create_service(payload: ServiceIn, request: Request, user: dict[str, Any] = Depends(require_roles("admin", "gestor"))):
     data = payload.model_dump(exclude_none=True)
-    if supabase_store.available():
-        saved = supabase_store.save_service(data)
-    else:
-        saved = upsert_json_row("services.json", data)
+    saved = require_supabase().save_service(data)
     audit_log("create", user, request, "service", saved.get("id"), {"name": saved.get("name")})
     return saved
 
@@ -1303,20 +1171,14 @@ def create_service(payload: ServiceIn, request: Request, user: dict[str, Any] = 
 @app.put("/api/config/services/{service_id}")
 def update_service(service_id: int, payload: ServiceIn, request: Request, user: dict[str, Any] = Depends(require_roles("admin", "gestor"))):
     data = payload.model_dump(exclude_none=True)
-    if supabase_store.available():
-        saved = supabase_store.save_service(data, service_id)
-    else:
-        saved = upsert_json_row("services.json", data, service_id)
+    saved = require_supabase().save_service(data, service_id)
     audit_log("update", user, request, "service", service_id, {"name": saved.get("name")})
     return saved
 
 
 @app.delete("/api/config/services/{service_id}")
 def delete_service(service_id: int, request: Request, user: dict[str, Any] = Depends(require_roles("admin"))):
-    if supabase_store.available():
-        result = supabase_store.delete_service(service_id)
-    else:
-        result = delete_json_row("services.json", service_id)
+    result = require_supabase().delete_service(service_id)
     audit_log("delete", user, request, "service", service_id)
     return result
 
@@ -1327,10 +1189,7 @@ def create_user(payload: UserIn, request: Request, user: dict[str, Any] = Depend
     if not new_user.get("password"):
         new_user["password"] = DEFAULT_NEW_USER_PASSWORD
     new_user["password"] = hash_password(new_user["password"])
-    if supabase_store.available():
-        saved = supabase_store.save_user(new_user)
-    else:
-        saved = upsert_json_row("users.json", new_user)
+    saved = require_supabase().save_user(new_user)
     audit_log("create", user, request, "user", saved.get("id"), {"username": saved.get("username")})
     return {k: v for k, v in saved.items() if k != "password"}
 
@@ -1345,10 +1204,7 @@ def update_user(user_id: int, payload: UserIn, request: Request, user: dict[str,
         saved_user["password"] = current.get("password", hash_password(DEFAULT_NEW_USER_PASSWORD))
     else:
         saved_user["password"] = hash_password(saved_user["password"])
-    if supabase_store.available():
-        saved = supabase_store.save_user(saved_user, user_id)
-    else:
-        saved = upsert_json_row("users.json", saved_user, user_id)
+    saved = require_supabase().save_user(saved_user, user_id)
     audit_log("update", user, request, "user", user_id, {"username": saved.get("username")})
     return {k: v for k, v in saved.items() if k != "password"}
 
@@ -1357,14 +1213,11 @@ def update_user(user_id: int, payload: UserIn, request: Request, user: dict[str,
 def delete_user(user_id: int, request: Request, user: dict[str, Any] = Depends(require_roles("admin"))):
     if str(user.get("id")) == str(user_id):
         raise HTTPException(status_code=400, detail="No puedes borrar tu propio usuario.")
-    if supabase_store.available():
-        result = supabase_store.delete_user(user_id)
-    else:
-        result = delete_json_row("users.json", user_id)
+    result = require_supabase().delete_user(user_id)
     audit_log("delete", user, request, "user", user_id)
     return result
 
 
 @app.get("/api/health")
 def health():
-    return {"ok": True, "storage": storage_name(), "supabase_configured": supabase_store.configured}
+    return {"ok": True, "company": current_company_slug(), "storage": storage_name(), "supabase_configured": supabase_store.configured}

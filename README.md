@@ -25,14 +25,18 @@ uvicorn main:app --reload
 
 Abre `http://127.0.0.1:8000`.
 
-Sin variables de Supabase, la app usa `data/*.json` y guarda facturas en `data/local_invoices.json`.
+La pantalla inicial permite entrar en **Fer-consulting** o en **FINCAS LASHERAS BLANCO S.L.**. Cada empresa mantiene separados sus maestros, usuarios, numeracion, facturas, lineas, precios y auditoria en Supabase.
+
+La aplicacion funciona exclusivamente con Supabase. Si faltan las variables de conexion o las tablas, devuelve un error de configuracion y no utiliza archivos JSON locales como respaldo.
 
 ## Crear tablas en Supabase
 
 1. En Supabase, abre **SQL Editor**.
 2. Ejecuta `supabase/schema.sql`.
 3. Ejecuta `supabase/seed.sql`.
-4. Copia `.env.example` a `.env` y rellena:
+4. Ejecuta `supabase/lasheras_schema.sql` para crear las tablas independientes de FINCAS LASHERAS BLANCO S.L.
+5. Ejecuta `supabase/lasheras_clients_seed.sql` para dar de alta los clientes del Excel de Fincas.
+6. Copia `.env.example` a `.env` y rellena:
 
 ```bash
 SUPABASE_URL=https://tu-proyecto.supabase.co

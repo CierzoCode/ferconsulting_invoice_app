@@ -1,3 +1,6 @@
+const companySlug = window.APP_COMPANY || 'fer-consulting';
+const sessionUserKey = `invoice_user_${companySlug}`;
+
 const state = {
   clients: [],
   services: [],
@@ -18,7 +21,7 @@ const state = {
   editingInvoiceNumber: null,
   pendingDeleteInvoiceId: null,
   restoringInvoiceDraft: false,
-  currentUser: JSON.parse(sessionStorage.getItem('fer_user') || 'null'),
+  currentUser: JSON.parse(sessionStorage.getItem(sessionUserKey) || 'null'),
   voice: {
     recognition: null,
     active: false,
@@ -31,8 +34,8 @@ const fmtMoney = new Intl.NumberFormat('es-ES', { style: 'currency', currency: '
 const fmtDate = new Intl.DateTimeFormat('es-ES');
 const qs = (s) => document.querySelector(s);
 const urlParams = new URLSearchParams(window.location.search);
-const invoiceDraftKey = 'fer_invoice_draft';
-const viewKey = 'fer_active_view';
+const invoiceDraftKey = `invoice_draft_${companySlug}`;
+const viewKey = `active_view_${companySlug}`;
 
 function toast(message) {
   const el = qs('#toast');
@@ -300,7 +303,7 @@ function handleVoiceAnswer(rawText) {
     fillVoiceDraftIntoInvoice();
   }
   if (step.key === 'payment') {
-    draft.payment = text.includes('giro') ? 'GIRO' : (state.settings.default_payment_method || 'TRANSFERENCIA ES15 2100 3586 5022 0012 1937 LA CAIXA');
+    draft.payment = text.includes('giro') ? 'GIRO' : (state.settings.default_payment_method || 'GIRO');
     fillVoiceDraftIntoInvoice();
   }
   if (step.key === 'delivery') {
@@ -380,7 +383,7 @@ async function api(path, options = {}) {
   const res = await fetch(path, {
     ...options,
     credentials: 'same-origin',
-    headers: { 'Content-Type': 'application/json', ...(options.headers || {}) },
+    headers: { 'Content-Type': 'application/json', 'X-Company': companySlug, ...(options.headers || {}) },
   });
   const data = await res.json().catch(() => ({}));
   if (!res.ok) {
@@ -783,7 +786,7 @@ function clearForm(showToast = true) {
   qs('#invoiceTypeInput').value = 'invoice';
   qs('#vatRateInput').value = '0.21';
   qs('#deliveryMethodInput').value = 'email';
-  qs('#paymentMethodInput').value = state.settings.default_payment_method || 'TRANSFERENCIA ES15 2100 3586 5022 0012 1937 LA CAIXA';
+  qs('#paymentMethodInput').value = state.settings.default_payment_method || 'GIRO';
   updateInvoiceNumberDisplay();
   selectClientByInput();
   document.querySelectorAll('#lineItems tr').forEach(row => {
@@ -878,11 +881,12 @@ function actionButtons(kind, id) {
 }
 
 function paymentPreferenceOptions(value = '') {
+  const transfer = state.settings.default_payment_method || '';
   const options = [
     ['', 'Sin preferencia'],
-    ['TRANSFERENCIA ES15 2100 3586 5022 0012 1937 LA CAIXA', 'Transferencia'],
+    [transfer, 'Transferencia'],
     ['GIRO', 'Giro'],
-  ];
+  ].filter(([optionValue], index) => optionValue || index === 0);
   return options.map(([optionValue, label]) => `<option value="${escapeHtml(optionValue)}" ${optionValue === value ? 'selected' : ''}>${label}</option>`).join('');
 }
 
@@ -1334,7 +1338,7 @@ async function handleLogin(event) {
       body: JSON.stringify({ username: qs('#loginUser').value, password: qs('#loginPassword').value }),
     });
     state.currentUser = data.user;
-    sessionStorage.setItem('fer_user', JSON.stringify(data.user));
+    sessionStorage.setItem(sessionUserKey, JSON.stringify(data.user));
     applySession();
     await loadAppData();
   } catch (err) {
@@ -1393,7 +1397,7 @@ async function init() {
   qs('#logoutBtn').addEventListener('click', async () => {
     await api('/api/logout', { method: 'POST' }).catch(() => {});
     state.currentUser = null;
-    sessionStorage.removeItem('fer_user');
+    sessionStorage.removeItem(sessionUserKey);
     applySession();
   });
   qs('#invoiceViewBtn').addEventListener('click', () => setView('invoice'));
@@ -1449,11 +1453,11 @@ async function init() {
   try {
     const session = await api('/api/session');
     state.currentUser = session.user;
-    sessionStorage.setItem('fer_user', JSON.stringify(session.user));
+    sessionStorage.setItem(sessionUserKey, JSON.stringify(session.user));
     await loadAppData();
   } catch (_) {
     state.currentUser = null;
-    sessionStorage.removeItem('fer_user');
+    sessionStorage.removeItem(sessionUserKey);
     const storageMode = qs('#storageMode');
     if (storageMode) {
       storageMode.textContent = 'Inicia sesion para cargar datos.';
