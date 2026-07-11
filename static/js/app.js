@@ -19,6 +19,7 @@ const state = {
   editingInvoiceId: null,
   editingInvoiceStatus: null,
   editingInvoiceNumber: null,
+  editingInvoiceDate: null,
   pendingDeleteInvoiceId: null,
   restoringInvoiceDraft: false,
   currentUser: JSON.parse(sessionStorage.getItem(sessionUserKey) || 'null'),
@@ -47,6 +48,10 @@ function toast(message) {
 
 function todayISO() {
   return new Date().toISOString().slice(0, 10);
+}
+
+function showInvoiceDate(value = todayISO()) {
+  qs('#invoiceDateText').textContent = fmtDate.format(new Date(`${value}T12:00:00`));
 }
 
 function escapeHtml(text) {
@@ -436,6 +441,7 @@ function saveInvoiceDraft() {
     editing_invoice_id: state.editingInvoiceId,
     editing_invoice_status: state.editingInvoiceStatus,
     editing_invoice_number: state.editingInvoiceNumber,
+    editing_invoice_date: state.editingInvoiceDate,
     register_button_text: qs('#registerBtn').textContent,
     rows_count: state.rows,
     client_input: qs('#clientInput').value,
@@ -469,6 +475,7 @@ function restoreInvoiceDraft() {
     state.editingInvoiceId = draft.editing_invoice_id || null;
     state.editingInvoiceStatus = draft.editing_invoice_status || null;
     state.editingInvoiceNumber = draft.editing_invoice_number || null;
+    state.editingInvoiceDate = draft.editing_invoice_date || null;
     qs('#registerBtn').textContent = draft.register_button_text || (state.editingInvoiceId ? 'Guardar cambios' : '2 Registrar factura');
     renderRows(Math.max(10, Number(draft.rows_count || 0), (draft.rows || []).length));
     qs('#clientInput').value = draft.client_input || '';
@@ -721,7 +728,7 @@ function collectPayload(status = 'pendiente_envio') {
   });
   const payload = {
     invoice_type: qs('#invoiceTypeInput').value,
-    invoice_date: todayISO(),
+    invoice_date: state.editingInvoiceDate || todayISO(),
     fiscal_year: Number(state.settings.fiscal_year || new Date().getFullYear()),
     client: clientForPayload(),
     items: rows,
@@ -780,6 +787,8 @@ function clearForm(showToast = true) {
   state.editingInvoiceId = null;
   state.editingInvoiceStatus = null;
   state.editingInvoiceNumber = null;
+  state.editingInvoiceDate = null;
+  showInvoiceDate();
   qs('#registerBtn').textContent = '2 Registrar factura';
   qs('#clientInput').value = '';
   qs('#notesInput').value = '';
@@ -808,6 +817,8 @@ async function loadInvoiceIntoForm(invoiceId) {
   state.editingInvoiceId = invoice.id;
   state.editingInvoiceStatus = invoice.status || null;
   state.editingInvoiceNumber = invoiceDisplayParts(invoice);
+  state.editingInvoiceDate = invoice.invoice_date || null;
+  showInvoiceDate(state.editingInvoiceDate || todayISO());
   const existing = state.clients.find(c => Number(c.id) === Number(invoice.client_id));
   state.selectedClient = existing || {
     id: invoice.client_id,
@@ -1376,7 +1387,7 @@ async function loadAppData() {
   if (storageMode) {
     storageMode.textContent = data.storage === 'supabase' ? 'Conectado a Supabase' : 'Modo local JSON';
   }
-  qs('#invoiceDateText').textContent = fmtDate.format(new Date());
+  showInvoiceDate();
   updateInvoiceNumberDisplay();
   fillCounterForm();
   qs('#paymentMethodInput').value = state.settings.default_payment_method || qs('#paymentMethodInput').value;
