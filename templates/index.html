@@ -87,6 +87,10 @@
               <option value="0.04">4%</option>
               <option value="0">0%</option>
             </select>
+            {% if company_slug == 'fincas-lasheras-blanco' %}
+            <label class="no-print">Retencion:</label>
+            <label class="withholding-option no-print"><input id="withholdingInput" type="checkbox" /> Aplicar retencion del 19% en alquileres</label>
+            {% endif %}
             <label>Cliente:</label>
             <div>
               <input id="clientInput" class="combo-input" placeholder="Selecciona o escribe un cliente" autocomplete="off" />
@@ -129,6 +133,7 @@
           <div class="totals">
             <div><span>Subtotal</span><strong id="subtotalText">0,00 EUR</strong></div>
             <div><span id="vatLabel">I.V.A. 21%</span><strong id="vatText">0,00 EUR</strong></div>
+            {% if company_slug == 'fincas-lasheras-blanco' %}<div id="withholdingRow" hidden><span>Ret. 19%</span><strong id="withholdingText">-0,00 EUR</strong></div>{% endif %}
             <div class="grand"><span>Total</span><strong id="totalText">0,00 EUR</strong></div>
           </div>
         </div>

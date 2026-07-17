@@ -34,6 +34,8 @@ alter table public.lasheras_client_prices alter column id set default nextval('p
 
 create table if not exists public.lasheras_invoices
   (like public.invoices including all);
+alter table public.lasheras_invoices add column if not exists withholding_rate numeric(8,4) not null default 0;
+alter table public.lasheras_invoices add column if not exists withholding_amount numeric(14,2) not null default 0;
 create table if not exists public.lasheras_audit_log
   (like public.audit_log including all);
 create table if not exists public.lasheras_invoice_items

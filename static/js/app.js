@@ -430,6 +430,7 @@ function saveInvoiceDraft() {
     state.editingInvoiceId ||
     qs('#clientInput').value.trim() ||
     qs('#notesInput').value.trim() ||
+    qs('#withholdingInput')?.checked ||
     rows.some(row => row.quantity || row.service || row.price || row.discount)
   );
   if (!hasContent) {
@@ -447,6 +448,7 @@ function saveInvoiceDraft() {
     client_input: qs('#clientInput').value,
     invoice_type: qs('#invoiceTypeInput').value,
     vat_rate: qs('#vatRateInput').value,
+    withholding_applied: Boolean(qs('#withholdingInput')?.checked),
     payment_method: qs('#paymentMethodInput').value,
     delivery_method: qs('#deliveryMethodInput').value,
     sequence: qs('#sequenceInput').value,
@@ -481,6 +483,7 @@ function restoreInvoiceDraft() {
     qs('#clientInput').value = draft.client_input || '';
     qs('#invoiceTypeInput').value = draft.invoice_type || 'invoice';
     qs('#vatRateInput').value = draft.vat_rate || '0.21';
+    if (qs('#withholdingInput')) qs('#withholdingInput').checked = Boolean(draft.withholding_applied);
     qs('#notesInput').value = draft.notes || '';
     if (draft.sequence) qs('#sequenceInput').value = draft.sequence;
     (draft.rows || []).forEach((item, index) => {
@@ -660,14 +663,18 @@ function calculateTotals() {
   });
   const vatRate = Number(qs('#vatRateInput').value || state.settings.vat_rate || 0.21);
   const vat = subtotal * vatRate;
-  const total = subtotal + vat;
+  const withholdingRate = qs('#withholdingInput')?.checked ? 0.19 : 0;
+  const withholding = subtotal * withholdingRate;
+  const total = subtotal + vat - withholding;
   qs('#subtotalText').textContent = fmtMoney.format(subtotal);
   qs('#vatLabel').textContent = `I.V.A. ${vatRate ? `${Math.round(vatRate * 100)}%` : '0%'}`;
   qs('#vatText').textContent = fmtMoney.format(vat);
+  if (qs('#withholdingRow')) qs('#withholdingRow').hidden = withholdingRate === 0;
+  if (qs('#withholdingText')) qs('#withholdingText').textContent = `-${fmtMoney.format(withholding)}`;
   qs('#totalText').textContent = fmtMoney.format(total);
   qs('#summaryLines').textContent = lines;
   qs('#summaryTotal').textContent = fmtMoney.format(total);
-  return { subtotal, vat, total, lines };
+  return { subtotal, vat, withholding, total, lines };
 }
 
 function updatePrintTexts() {
@@ -733,6 +740,7 @@ function collectPayload(status = 'pendiente_envio') {
     client: clientForPayload(),
     items: rows,
     vat_rate: Number(qs('#vatRateInput').value || 0.21),
+    withholding_rate: qs('#withholdingInput')?.checked ? 0.19 : 0,
     payment_method: qs('#paymentMethodInput').value,
     delivery_method: qs('#deliveryMethodInput').value,
     notes: qs('#notesInput').value.trim(),
@@ -794,6 +802,7 @@ function clearForm(showToast = true) {
   qs('#notesInput').value = '';
   qs('#invoiceTypeInput').value = 'invoice';
   qs('#vatRateInput').value = '0.21';
+  if (qs('#withholdingInput')) qs('#withholdingInput').checked = false;
   qs('#deliveryMethodInput').value = 'email';
   qs('#paymentMethodInput').value = state.settings.default_payment_method || 'GIRO';
   updateInvoiceNumberDisplay();
@@ -835,6 +844,7 @@ async function loadInvoiceIntoForm(invoiceId) {
   qs('#invoiceTypeInput').value = invoice.invoice_type || 'invoice';
   updateInvoiceNumberDisplay();
   qs('#vatRateInput').value = String(Number(invoice.vat_rate ?? 0.21));
+  if (qs('#withholdingInput')) qs('#withholdingInput').checked = Number(invoice.withholding_rate || 0) === 0.19;
   qs('#notesInput').value = invoice.notes || '';
   renderRows(Math.max(10, (invoice.items || []).length));
   (invoice.items || []).forEach((item, index) => {
@@ -1439,6 +1449,7 @@ async function init() {
   qs('#notesInput').addEventListener('input', syncNotesPrintState);
   qs('#invoiceTypeInput').addEventListener('change', updateInvoiceNumberDisplay);
   qs('#vatRateInput').addEventListener('change', calculateTotals);
+  qs('#withholdingInput')?.addEventListener('change', calculateTotals);
   qs('#sequenceInput').addEventListener('input', () => qs('#sequencePrint').textContent = qs('#sequenceInput').value);
   qs('#invoiceView').addEventListener('input', saveInvoiceDraft);
   qs('#invoiceView').addEventListener('change', saveInvoiceDraft);

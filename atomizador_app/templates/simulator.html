@@ -1,0 +1,261 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#0d281d">
+  <title>Simulador ESP32 · Atomizador</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/simulator.css') }}">
+</head>
+<body class="simulator-body">
+  <div class="app-shell">
+    <header class="topbar">
+      <a class="brand brand-link" href="{{ url_for('index') }}">
+        <div class="brand-mark" aria-hidden="true">
+          <svg viewBox="0 0 48 48" role="img">
+            <path d="M24 4c8 9 14 16 14 25a14 14 0 1 1-28 0C10 20 16 13 24 4Z"></path>
+            <path class="brand-cut" d="M15 31c5 3 13 2 18-4"></path>
+          </svg>
+        </div>
+        <div>
+          <p class="eyebrow">LABORATORIO DE HARDWARE</p>
+          <h1>Simulador ESP32</h1>
+        </div>
+      </a>
+      <div class="topbar-actions">
+        <div id="simServerBadge" class="status-badge status-muted">
+          <span class="status-dot"></span>
+          <span>Comprobando servidor…</span>
+        </div>
+        <a class="topbar-link" href="{{ url_for('index') }}">
+          <span class="topbar-link-icon">←</span>
+          <span>Panel principal</span>
+        </a>
+      </div>
+    </header>
+
+    <main class="sim-main">
+      <section class="sim-hero">
+        <div>
+          <p class="eyebrow">ESP32-WROOM · WIFI · ADC · PULSOS · GPS</p>
+          <h2>Banco de pruebas virtual del atomizador</h2>
+          <p>La placa virtual ejecuta el mismo ciclo que el firmware real: arranque, conexión WiFi, lectura de entradas, conversión 4–20 mA, conteo de pulsos y envío HTTP a Flask.</p>
+        </div>
+        <div class="sim-hero-actions">
+          <button id="bootButton" class="button button-secondary" type="button">Encender placa</button>
+          <button id="startSimButton" class="button button-primary" type="button">Iniciar simulación</button>
+          <button id="stopSimButton" class="button button-danger" type="button" disabled>Detener</button>
+        </div>
+      </section>
+
+      <section class="sim-status-strip" aria-label="Estado del simulador">
+        <div><span>Placa</span><strong id="boardStateText">Apagada</strong></div>
+        <div><span>WiFi</span><strong id="wifiStateText">Desconectado</strong></div>
+        <div><span>Tratamiento</span><strong id="sessionStateText">Consultando…</strong></div>
+        <div><span>Paquetes OK</span><strong id="packetsSentText">0</strong></div>
+        <div><span>Fallidos</span><strong id="packetsFailedText">0</strong></div>
+        <div><span>Latencia</span><strong id="latencyText">—</strong></div>
+      </section>
+
+      <section class="sim-grid">
+        <article class="sim-card board-card">
+          <div class="sim-card-header">
+            <div>
+              <p class="eyebrow">PLACA VIRTUAL</p>
+              <h3>ESP32 DevKit</h3>
+            </div>
+            <div id="boardRunBadge" class="device-badge">OFF</div>
+          </div>
+
+          <div class="board-stage" id="boardStage">
+            <div class="wire wire-p1"></div>
+            <div class="wire wire-p2"></div>
+            <div class="wire wire-flow"></div>
+            <div class="wire wire-gps"></div>
+
+            <div class="sensor-node sensor-p1">
+              <span>PRESIÓN 1</span><strong id="nodeP1">0,0 bar</strong><small>GPIO 34 · ADC</small>
+            </div>
+            <div class="sensor-node sensor-p2">
+              <span>PRESIÓN 2</span><strong id="nodeP2">0,0 bar</strong><small>GPIO 35 · ADC</small>
+            </div>
+            <div class="sensor-node sensor-flow">
+              <span>CAUDAL</span><strong id="nodeFlow">0,0 L/min</strong><small>GPIO 27 · IRQ</small>
+            </div>
+            <div class="sensor-node sensor-gps">
+              <span>GPS</span><strong id="nodeGps">Sin posición</strong><small>UART2 · 9600</small>
+            </div>
+
+            <div class="esp-board" id="espBoard">
+              <div class="usb-port"></div>
+              <div class="pin-row pin-left"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></div>
+              <div class="pin-row pin-right"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></div>
+              <div class="antenna-zone">
+                <i></i><i></i><i></i><i></i>
+              </div>
+              <div class="module-shield">
+                <strong>ESP32-WROOM-32</strong>
+                <small>2.4 GHz WiFi + Bluetooth</small>
+              </div>
+              <div class="board-leds">
+                <span class="led led-power" title="Alimentación"></span>
+                <span class="led led-data" title="Transmisión"></span>
+              </div>
+              <div class="chip-label">CP2102</div>
+              <button class="board-button board-en" type="button" tabindex="-1">EN</button>
+              <button class="board-button board-boot" type="button" tabindex="-1">BOOT</button>
+            </div>
+          </div>
+
+          <div class="board-footer-stats">
+            <div><span>Uptime</span><strong id="uptimeText">00:00:00</strong></div>
+            <div><span>RSSI</span><strong id="rssiText">— dBm</strong></div>
+            <div><span>Intervalo</span><strong id="intervalText">1000 ms</strong></div>
+            <div><span>Secuencia</span><strong id="sequenceText">0</strong></div>
+          </div>
+        </article>
+
+        <article class="sim-card controls-card">
+          <div class="sim-card-header">
+            <div>
+              <p class="eyebrow">ENTRADAS Y AVERÍAS</p>
+              <h3>Control del entorno</h3>
+            </div>
+            <select id="scenarioSelect" class="compact-select" aria-label="Escenario de simulación">
+              <option value="normal">Trabajo normal</option>
+              <option value="filter_blocked">Filtro obstruido</option>
+              <option value="branch_blocked">Ramal 2 obstruido</option>
+              <option value="pump_failure">Fallo de bomba</option>
+              <option value="stopped_with_flow">Caudal estando parado</option>
+              <option value="gps_loss">Pérdida de GPS</option>
+              <option value="wifi_loss">Pérdida de WiFi</option>
+            </select>
+          </div>
+
+          <div class="control-section">
+            <div class="section-title"><strong>Mandos del atomizador</strong><span>Los deslizadores representan señales físicas.</span></div>
+            <label class="slider-field">
+              <span>Presión ramal 1 <output id="pressure1Output">10,0 bar</output></span>
+              <input id="pressure1Input" type="range" min="0" max="25" step="0.1" value="10">
+            </label>
+            <label class="slider-field">
+              <span>Presión ramal 2 <output id="pressure2Output">9,8 bar</output></span>
+              <input id="pressure2Input" type="range" min="0" max="25" step="0.1" value="9.8">
+            </label>
+            <label class="slider-field">
+              <span>Caudal total <output id="flowOutput">22,0 L/min</output></span>
+              <input id="flowInput" type="range" min="0" max="80" step="0.1" value="22">
+            </label>
+            <label class="slider-field">
+              <span>Velocidad <output id="speedOutput">5,5 km/h</output></span>
+              <input id="speedInput" type="range" min="0" max="15" step="0.1" value="5.5">
+            </label>
+          </div>
+
+          <div class="switch-grid">
+            <label class="sim-switch"><input id="pumpSwitch" type="checkbox" checked><span></span><b>Bomba</b></label>
+            <label class="sim-switch"><input id="branch1Switch" type="checkbox" checked><span></span><b>Ramal 1</b></label>
+            <label class="sim-switch"><input id="branch2Switch" type="checkbox" checked><span></span><b>Ramal 2</b></label>
+            <label class="sim-switch"><input id="gpsSwitch" type="checkbox" checked><span></span><b>GPS</b></label>
+            <label class="sim-switch"><input id="wifiSwitch" type="checkbox" checked><span></span><b>WiFi</b></label>
+            <label class="sim-switch"><input id="noiseSwitch" type="checkbox" checked><span></span><b>Ruido realista</b></label>
+          </div>
+
+          <div class="control-section calibration-section">
+            <div class="section-title"><strong>Calibración electrónica</strong><span>Equivalente al firmware de la placa real.</span></div>
+            <div class="mini-form-grid">
+              <label><span>Sensor máx. (bar)</span><input id="pressureMaxInput" type="number" min="1" max="100" step="1" value="25"></label>
+              <label><span>Shunt (Ω)</span><input id="shuntInput" type="number" min="50" max="200" step="1" value="150"></label>
+              <label><span>Pulsos/litro</span><input id="pulsesPerLiterInput" type="number" min="1" max="10000" step="1" value="450"></label>
+              <label><span>Intervalo (ms)</span><input id="sendIntervalInput" type="number" min="250" max="10000" step="250" value="1000"></label>
+            </div>
+          </div>
+        </article>
+
+        <article class="sim-card network-card">
+          <div class="sim-card-header">
+            <div>
+              <p class="eyebrow">RED Y API</p>
+              <h3>Conexión WiFi simulada</h3>
+            </div>
+            <span id="wifiChip" class="wifi-chip">OFFLINE</span>
+          </div>
+
+          <div class="network-form">
+            <label><span>SSID</span><input id="ssidInput" value="ATOMIZADOR_TRACTOR" maxlength="32"></label>
+            <label><span>Contraseña</span><input id="wifiPasswordInput" type="password" value="tractor-wifi"></label>
+            <label class="wide"><span>URL de telemetría</span><input id="apiUrlInput" type="url"></label>
+            <label class="wide"><span>API key (opcional)</span><input id="apiKeyInput" autocomplete="off" placeholder="X-API-Key"></label>
+            <label><span>RSSI simulado</span><input id="rssiInput" type="number" min="-95" max="-30" value="-58"></label>
+            <label><span>Rumbo GPS (°)</span><input id="headingInput" type="number" min="0" max="359" value="35"></label>
+            <label><span>Latitud inicial</span><input id="latitudeInput" type="number" step="0.0000001" value="41.6488"></label>
+            <label><span>Longitud inicial</span><input id="longitudeInput" type="number" step="0.0000001" value="-0.8891"></label>
+          </div>
+
+          <label class="auto-session">
+            <input id="autoSessionCheckbox" type="checkbox" checked>
+            <span>Crear automáticamente un tratamiento de prueba si no existe uno activo.</span>
+          </label>
+
+          <div class="network-actions">
+            <button id="connectWifiButton" class="button button-secondary" type="button">Conectar WiFi</button>
+            <button id="sendOnceButton" class="button button-secondary" type="button">Enviar un paquete</button>
+            <button id="resetSimButton" class="button button-secondary" type="button">Reiniciar placa</button>
+          </div>
+        </article>
+
+        <article class="sim-card conversion-card">
+          <div class="sim-card-header">
+            <div>
+              <p class="eyebrow">CONVERSIÓN EN TIEMPO REAL</p>
+              <h3>Entradas de la placa</h3>
+            </div>
+          </div>
+          <div class="conversion-table" role="table" aria-label="Conversión de sensores">
+            <div class="conversion-row conversion-head" role="row"><span>Canal</span><span>mA</span><span>Voltios</span><span>ADC 12 bit</span></div>
+            <div class="conversion-row" role="row"><strong>GPIO 34</strong><span id="p1CurrentText">4,00</span><span id="p1VoltageText">0,600</span><span id="p1AdcText">744</span></div>
+            <div class="conversion-row" role="row"><strong>GPIO 35</strong><span id="p2CurrentText">4,00</span><span id="p2VoltageText">0,600</span><span id="p2AdcText">744</span></div>
+            <div class="conversion-row" role="row"><strong>GPIO 27</strong><span>—</span><span>pulso</span><span id="flowPulsesText">0 pulsos</span></div>
+          </div>
+          <div class="payload-box">
+            <div class="payload-title"><strong>JSON enviado por HTTP POST</strong><span id="payloadBytesText">0 bytes</span></div>
+            <pre id="payloadPreview">{}</pre>
+          </div>
+        </article>
+      </section>
+
+      <section class="monitor-grid">
+        <article class="sim-card serial-card">
+          <div class="sim-card-header monitor-header">
+            <div>
+              <p class="eyebrow">PUERTO SERIE · 115200 BAUD</p>
+              <h3>Monitor serie</h3>
+            </div>
+            <button id="clearLogButton" class="text-button" type="button">Limpiar</button>
+          </div>
+          <div id="serialMonitor" class="serial-monitor" aria-live="polite"><div class="serial-line muted-line">[00:00:00.000] ESP32 apagado. Pulsa «Encender placa».</div></div>
+        </article>
+
+        <article class="sim-card response-card">
+          <div class="sim-card-header monitor-header">
+            <div>
+              <p class="eyebrow">RESPUESTA FLASK</p>
+              <h3>Última petición</h3>
+            </div>
+            <span id="httpStatusBadge" class="http-badge">SIN ENVÍOS</span>
+          </div>
+          <pre id="responsePreview" class="response-preview">La respuesta de /api/telemetry aparecerá aquí.</pre>
+          <div class="response-help">
+            <strong>Prueba completa</strong>
+            <p>Abre el panel principal en otra pestaña. Verás los valores, alarmas, litros, hectáreas y recorrido GPS alimentados por esta placa virtual.</p>
+          </div>
+        </article>
+      </section>
+    </main>
+  </div>
+
+  <div id="simToast" class="toast" role="status" aria-live="polite"></div>
+  <script src="{{ url_for('static', filename='js/simulator.js') }}"></script>
+</body>
+</html>

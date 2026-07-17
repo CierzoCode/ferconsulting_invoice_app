@@ -48,6 +48,8 @@ h1 { margin: 0; font-size: clamp(28px, 4vw, 44px); }
 .inline-number { width: 74px; border: 1px solid var(--line); border-radius: 8px; padding: 4px 6px; font-weight: 800; font-size: 1rem; }
 .customer-grid { display: grid; grid-template-columns: 105px 1fr 105px 1fr; gap: 12px 16px; margin: 26px 0; align-items: center; }
 .customer-grid label { color: var(--muted); font-weight: 800; }
+.withholding-option { display: flex; align-items: center; gap: 9px; color: var(--ink) !important; cursor: pointer; }
+.withholding-option input { width: 18px; height: 18px; margin: 0; accent-color: var(--accent-dark); flex: 0 0 auto; }
 input, select, textarea { width: 100%; border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; font: inherit; color: var(--ink); background: #fff; }
 .combo-input { min-width: 0; }
 .combo-menu { position: absolute; max-height: 280px; overflow: auto; background: #fff; border: 1px solid var(--line); border-radius: 8px; box-shadow: var(--shadow); z-index: 80; padding: 4px; }
@@ -73,6 +75,7 @@ output { min-height: 40px; border: 1px solid var(--line); border-radius: 8px; pa
 .totals div { display: flex; justify-content: space-between; gap: 18px; padding: 12px 16px; border-bottom: 1px solid var(--line); }
 .totals div:last-child { border-bottom: 0; }
 .totals .grand { background: #f0f4ea; font-size: 20px; color: var(--accent-dark); }
+.totals [hidden] { display: none; }
 .payment-block { margin-top: 24px; color: var(--ink); }
 .web-link { color: var(--accent-dark); font-weight: 800; }
 .invoice-footer { margin-top: 18px; border-top: 1px solid var(--line); padding-top: 18px; font-size: 11px; color: #31372a; }

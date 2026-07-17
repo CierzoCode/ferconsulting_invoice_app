@@ -202,6 +202,7 @@ class InvoiceIn(BaseModel):
     client: ClientSnapshot
     items: list[InvoiceItemIn]
     vat_rate: float = VAT_RATE
+    withholding_rate: float = 0
     payment_method: str = SETTINGS.get("default_payment_method", "TRANSFERENCIA")
     delivery_method: str = "email"
     notes: str = ""
@@ -237,6 +238,14 @@ class InvoiceIn(BaseModel):
         if value < 0 or value > 1:
             raise ValueError("IVA no valido.")
         return value
+
+    @field_validator("withholding_rate")
+    @classmethod
+    def valid_withholding_rate(cls, value):
+        value = float(value or 0)
+        if round(value, 4) not in {0, 0.19}:
+            raise ValueError("Retencion no valida.")
+        return round(value, 4)
 
 
 class LoginIn(BaseModel):
@@ -586,12 +595,16 @@ def calculate_invoice(payload: InvoiceIn) -> dict[str, Any]:
     subtotal = money(subtotal)
     vat_rate = float(payload.vat_rate if payload.vat_rate is not None else VAT_RATE)
     vat_amount = money(subtotal * vat_rate)
-    total = money(subtotal + vat_amount)
+    withholding_rate = 0.19 if current_company_slug() == "fincas-lasheras-blanco" and money(payload.withholding_rate) == 0.19 else 0
+    withholding_amount = money(subtotal * withholding_rate)
+    total = money(subtotal + vat_amount - withholding_amount)
     return {
         "items": cleaned_items,
         "subtotal": subtotal,
         "vat_rate": vat_rate,
         "vat_amount": vat_amount,
+        "withholding_rate": withholding_rate,
+        "withholding_amount": withholding_amount,
         "total": total,
     }
 
@@ -1024,6 +1037,8 @@ def create_invoice(payload: InvoiceIn, request: Request, user: dict[str, Any] = 
         "subtotal": calculations["subtotal"],
         "vat_rate": calculations["vat_rate"],
         "vat_amount": calculations["vat_amount"],
+        "withholding_rate": calculations["withholding_rate"],
+        "withholding_amount": calculations["withholding_amount"],
         "total": calculations["total"],
         "status": clean_status("proforma" if invoice_type == "proforma" else "pendiente_envio", invoice_type),
         "notes": payload.notes,
@@ -1079,6 +1094,8 @@ def update_invoice(invoice_id: str, payload: InvoiceUpdateIn, request: Request, 
         "subtotal": calculations["subtotal"],
         "vat_rate": calculations["vat_rate"],
         "vat_amount": calculations["vat_amount"],
+        "withholding_rate": calculations["withholding_rate"],
+        "withholding_amount": calculations["withholding_amount"],
         "total": calculations["total"],
         "status": clean_status(payload.status, clean_invoice_type(payload.invoice_type)),
         "notes": payload.notes,

@@ -1,0 +1,332 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#0d281d">
+  <title>Atomizador · Control de aplicación</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+</head>
+<body>
+  <div class="app-shell">
+    <header class="topbar">
+      <div class="brand">
+        <div class="brand-mark" aria-hidden="true">
+          <svg viewBox="0 0 48 48" role="img">
+            <path d="M24 4c8 9 14 16 14 25a14 14 0 1 1-28 0C10 20 16 13 24 4Z"></path>
+            <path class="brand-cut" d="M15 31c5 3 13 2 18-4"></path>
+          </svg>
+        </div>
+        <div>
+          <p class="eyebrow">CONTROL DE TRATAMIENTOS</p>
+          <h1>Atomizador</h1>
+        </div>
+      </div>
+      <div class="topbar-actions">
+        <div id="connectionBadge" class="status-badge status-muted">
+          <span class="status-dot"></span>
+          <span>Conectando…</span>
+        </div>
+        <div id="gpsBadge" class="status-badge status-muted" title="GPS del dispositivo en uso">
+          <span class="status-dot"></span>
+          <span>Activando GPS…</span>
+        </div>
+        <a class="topbar-link" href="{{ url_for('simulator') }}" title="Abrir simulador ESP32">
+          <span class="topbar-link-icon">▣</span>
+          <span>Simulador ESP32</span>
+        </a>
+        <button id="openSettingsButton" class="icon-button" type="button" title="Configuración" aria-label="Abrir configuración">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Zm7.4-3.5c0-.5 0-.9-.1-1.3l2-1.6-2-3.5-2.5 1a8 8 0 0 0-2.2-1.3L14.2 2h-4l-.4 3.3c-.8.3-1.5.7-2.2 1.3l-2.5-1-2 3.5 2 1.6a8 8 0 0 0 0 2.6l-2 1.6 2 3.5 2.5-1c.7.6 1.4 1 2.2 1.3l.4 3.3h4l.4-3.3c.8-.3 1.5-.7 2.2-1.3l2.5 1 2-3.5-2-1.6c.1-.4.1-.8.1-1.3Z"></path></svg>
+        </button>
+      </div>
+    </header>
+
+    <main class="main-content">
+      <section class="hero-panel">
+        <div class="session-summary">
+          <div>
+            <p class="eyebrow">TRATAMIENTO ACTUAL</p>
+            <h2 id="sessionTitle">Sin tratamiento activo</h2>
+            <p id="sessionSubtitle" class="muted">Configura una parcela y pulsa “Iniciar”.</p>
+          </div>
+          <div class="session-controls">
+            <label class="switch-control" title="Genera datos de prueba sin sensores">
+              <input id="demoToggle" type="checkbox">
+              <span class="switch-track"><span class="switch-thumb"></span></span>
+              <span>Demo rápido</span>
+            </label>
+            <button id="startSessionButton" class="button button-primary" type="button">Iniciar tratamiento</button>
+            <button id="stopSessionButton" class="button button-danger hidden" type="button">Finalizar</button>
+          </div>
+        </div>
+
+        <div class="progress-row">
+          <div class="progress-copy">
+            <span>Depósito estimado</span>
+            <strong id="tankText">—</strong>
+          </div>
+          <div class="progress-track" aria-label="Nivel estimado del depósito">
+            <div id="tankProgress" class="progress-fill" style="width: 0%"></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="metrics-grid" aria-label="Mediciones actuales">
+        <article class="metric-card metric-primary">
+          <div class="metric-header">
+            <span class="metric-label">Aplicación instantánea</span>
+            <span id="lhaState" class="metric-pill">Sin datos</span>
+          </div>
+          <div class="metric-value"><span id="lhaValue">—</span><small>L/ha</small></div>
+          <div class="target-line">Objetivo: <strong id="lhaTarget">—</strong> L/ha</div>
+        </article>
+
+        <article class="metric-card">
+          <span class="metric-label">Presión ramal 1</span>
+          <div class="metric-value"><span id="pressure1Value">—</span><small>bar</small></div>
+          <div class="mini-gauge"><span id="pressure1Gauge"></span></div>
+        </article>
+
+        <article class="metric-card">
+          <span class="metric-label">Presión ramal 2</span>
+          <div class="metric-value"><span id="pressure2Value">—</span><small>bar</small></div>
+          <div class="mini-gauge"><span id="pressure2Gauge"></span></div>
+        </article>
+
+        <article class="metric-card">
+          <span class="metric-label">Caudal</span>
+          <div class="metric-value"><span id="flowValue">—</span><small>L/min</small></div>
+          <p id="flowHint" class="metric-hint">Caudal total del equipo</p>
+        </article>
+
+        <article class="metric-card">
+          <span class="metric-label">Velocidad</span>
+          <div class="metric-value"><span id="speedValue">—</span><small>km/h</small></div>
+          <p id="workState" class="metric-hint">Esperando movimiento</p>
+        </article>
+
+        <article class="metric-card">
+          <span class="metric-label">Media del tratamiento</span>
+          <div class="metric-value"><span id="averageLhaValue">—</span><small>L/ha</small></div>
+          <p class="metric-hint">Litros reales / superficie</p>
+        </article>
+      </section>
+
+      <section class="content-grid">
+        <article class="panel map-panel">
+          <div class="panel-header">
+            <div>
+              <p class="eyebrow">RECORRIDO GPS</p>
+              <h3>Cobertura de la parcela</h3>
+            </div>
+            <div class="map-header-actions">
+              <div class="legend"><span></span> Zona recorrida</div>
+              <button id="openDriveModeButton" class="button button-secondary" type="button">Modo ampliado</button>
+            </div>
+          </div>
+          <div class="map-stage">
+            <canvas id="routeCanvas" aria-label="Representación del recorrido GPS"></canvas>
+            <div id="mapEmpty" class="empty-overlay">
+              <div class="empty-icon">⌖</div>
+              <strong>Esperando posiciones GPS</strong>
+              <span>El recorrido aparecerá al recibir latitud y longitud.</span>
+            </div>
+          </div>
+          <div class="map-stats">
+            <div><span>Superficie</span><strong id="areaValue">0,000 ha</strong></div>
+            <div><span>Distancia</span><strong id="distanceValue">0 m</strong></div>
+            <div><span>Tiempo activo</span><strong id="workTimeValue">00:00:00</strong></div>
+          </div>
+        </article>
+
+        <article class="panel chart-panel">
+          <div class="panel-header">
+            <div>
+              <p class="eyebrow">ÚLTIMOS 2 MINUTOS</p>
+              <h3>Estabilidad de aplicación</h3>
+            </div>
+            <div class="chart-legend">
+              <span class="legend-lha">L/ha</span>
+              <span class="legend-pressure">Presión</span>
+            </div>
+          </div>
+          <div class="chart-stage">
+            <canvas id="historyCanvas" aria-label="Gráfica de aplicación y presión"></canvas>
+          </div>
+          <div class="totals-grid">
+            <div class="total-item"><span>Litros aplicados</span><strong id="litersValue">0,0 L</strong></div>
+            <div class="total-item"><span>Depósito restante</span><strong id="remainingValue">—</strong></div>
+            <div class="total-item"><span>Desviación actual</span><strong id="deviationValue">—</strong></div>
+          </div>
+        </article>
+      </section>
+
+      <section class="panel dose-panel" aria-labelledby="doseCalculatorTitle">
+        <div class="panel-header compact">
+          <div>
+            <p class="eyebrow">PLANIFICACIÓN</p>
+            <h3 id="doseCalculatorTitle">Calculadora de dosis</h3>
+          </div>
+          <span class="dose-hint">Cálculo orientativo por superficie</span>
+        </div>
+        <div class="dose-calculator">
+          <form id="doseForm" class="dose-fields">
+            <label class="field"><span>Superficie (ha)</span><input id="doseArea" type="number" min="0" step="0.01" value="1" inputmode="decimal"></label>
+            <label class="field"><span>Dosis de producto / ha</span><input id="doseRate" type="number" min="0" step="0.01" value="1" inputmode="decimal"></label>
+            <label class="field"><span>Unidad del producto</span>
+              <select id="doseUnit"><option value="L">L/ha</option><option value="ml">ml/ha</option><option value="kg">kg/ha</option><option value="g">g/ha</option></select>
+            </label>
+            <label class="field"><span>Volumen de caldo (L/ha)</span><input id="doseVolume" type="number" min="0.01" step="1" value="300" inputmode="decimal"></label>
+            <label class="field"><span>Capacidad del depósito (L)</span><input id="doseTank" type="number" min="0.01" step="1" value="600" inputmode="decimal"></label>
+          </form>
+          <div class="dose-results" aria-live="polite">
+            <div><span>Producto total</span><strong id="doseProductTotal">1,00 L</strong></div>
+            <div><span>Caldo total</span><strong id="doseMixTotal">300 L</strong></div>
+            <div><span>Cargas necesarias</span><strong id="doseTanks">1</strong></div>
+            <div><span>Producto por depósito completo</span><strong id="doseProductTank">2,00 L</strong></div>
+          </div>
+        </div>
+        <p class="dose-warning">Comprueba siempre la etiqueta del producto, sus límites de uso y la compatibilidad de la mezcla.</p>
+      </section>
+
+      <section class="bottom-grid">
+        <article class="panel alarm-panel">
+          <div class="panel-header compact">
+            <div>
+              <p class="eyebrow">CONTROL</p>
+              <h3>Alarmas activas</h3>
+            </div>
+            <span id="alarmCount" class="count-badge">0</span>
+          </div>
+          <div id="alarmList" class="alarm-list">
+            <div class="empty-list">No hay alarmas activas.</div>
+          </div>
+        </article>
+
+        <article class="panel history-panel">
+          <div class="panel-header compact">
+            <div>
+              <p class="eyebrow">REGISTRO</p>
+              <h3>Últimos tratamientos</h3>
+            </div>
+            <button id="refreshHistoryButton" class="text-button" type="button">Actualizar</button>
+          </div>
+          <div id="sessionHistory" class="session-history">
+            <div class="empty-list">Todavía no hay tratamientos guardados.</div>
+          </div>
+        </article>
+      </section>
+    </main>
+  </div>
+
+  <div id="driveMode" class="drive-mode hidden" role="dialog" aria-modal="true" aria-label="Modo de conducción">
+    <header class="drive-header">
+      <div><p class="eyebrow">MODO TRACTOR</p><h2 id="driveSessionTitle">Atomizador</h2></div>
+      <div class="drive-header-actions"><span id="driveGpsState" class="drive-gps">GPS</span><button id="closeDriveModeButton" class="drive-close" type="button">Salir</button></div>
+    </header>
+    <main class="drive-layout">
+      <section class="drive-map">
+        <canvas id="driveRouteCanvas" aria-label="Recorrido GPS ampliado"></canvas>
+        <div id="driveMapEmpty" class="empty-overlay"><strong>Esperando recorrido GPS</strong></div>
+      </section>
+      <aside class="drive-dashboard">
+        <div class="drive-metrics">
+          <article class="drive-metric primary"><span>Dosis</span><strong><b id="driveLha">—</b><small>L/ha</small></strong></article>
+          <article class="drive-metric"><span>Velocidad</span><strong><b id="driveSpeed">—</b><small>km/h</small></strong></article>
+          <article class="drive-metric"><span>Caudal</span><strong><b id="driveFlow">—</b><small>L/min</small></strong></article>
+          <article class="drive-metric"><span>Presión izquierda / derecha</span><strong><b id="drivePressure">— / —</b><small>bar</small></strong></article>
+          <article class="drive-metric"><span>Depósito restante</span><strong><b id="driveTank">—</b><small>L</small></strong></article>
+          <article class="drive-metric"><span>Autonomía estimada</span><strong><b id="driveAutonomy">—</b><small>horas</small></strong></article>
+        </div>
+        <form id="driveTankForm" class="drive-tank-control">
+          <label><span>Litros actuales</span><input id="driveTankInput" type="number" min="0" max="10000" step="1" inputmode="decimal"></label>
+          <button class="drive-tank-save" type="submit">Actualizar</button>
+          <button id="fillTankButton" class="drive-tank-fill" type="button">Marcar lleno</button>
+        </form>
+        <div class="side-controls">
+          <button id="leftSideButton" class="side-button" type="button"><span>LADO IZQUIERDO</span><strong>APAGADO</strong></button>
+          <button id="rightSideButton" class="side-button" type="button"><span>LADO DERECHO</span><strong>APAGADO</strong></button>
+        </div>
+      </aside>
+    </main>
+  </div>
+
+  <dialog id="sessionDialog" class="modal">
+    <form id="sessionForm" method="dialog" class="modal-card">
+      <div class="modal-header">
+        <div>
+          <p class="eyebrow">NUEVO TRATAMIENTO</p>
+          <h2>Datos de trabajo</h2>
+        </div>
+        <button class="icon-button close-modal" value="cancel" aria-label="Cerrar" type="submit">×</button>
+      </div>
+      <div class="form-grid">
+        <label class="field field-wide">
+          <span>Parcela</span>
+          <input name="parcel" required maxlength="120" placeholder="Ej. Campo norte">
+        </label>
+        <label class="field">
+          <span>Producto</span>
+          <input name="product" maxlength="120" placeholder="Ej. Tratamiento fungicida">
+        </label>
+        <label class="field">
+          <span>Operario</span>
+          <input name="operator" maxlength="120" placeholder="Nombre del conductor">
+        </label>
+        <label class="field">
+          <span>Litros iniciales</span>
+          <input name="tank_initial_l" type="number" min="0" step="1" required>
+        </label>
+        <label class="field">
+          <span>Anchura de trabajo (m)</span>
+          <input name="work_width_m" type="number" min="0.1" step="0.1" required>
+        </label>
+        <label class="field">
+          <span>Objetivo (L/ha)</span>
+          <input name="target_l_ha" type="number" min="1" step="1" required>
+        </label>
+        <label class="field">
+          <span>Presión objetivo (bar)</span>
+          <input name="target_pressure_bar" type="number" min="0" step="0.1" required>
+        </label>
+      </div>
+      <div class="modal-actions">
+        <button class="button button-secondary" value="cancel" type="submit">Cancelar</button>
+        <button id="confirmStartButton" class="button button-primary" value="default" type="submit">Iniciar</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="settingsDialog" class="modal">
+    <form id="settingsForm" method="dialog" class="modal-card modal-card-large">
+      <div class="modal-header">
+        <div>
+          <p class="eyebrow">CONFIGURACIÓN</p>
+          <h2>Equipo y alarmas</h2>
+        </div>
+        <button class="icon-button close-modal" value="cancel" aria-label="Cerrar" type="submit">×</button>
+      </div>
+      <div class="form-grid">
+        <label class="field"><span>Anchura predeterminada (m)</span><input name="work_width_m" type="number" min="0.1" step="0.1" required></label>
+        <label class="field"><span>Aplicación objetivo (L/ha)</span><input name="target_l_ha" type="number" min="1" step="1" required></label>
+        <label class="field"><span>Presión objetivo (bar)</span><input name="target_pressure_bar" type="number" min="0" step="0.1" required></label>
+        <label class="field"><span>Tolerancia presión (± bar)</span><input name="pressure_tolerance_bar" type="number" min="0.1" step="0.1" required></label>
+        <label class="field"><span>Alarma diferencia ramales (bar)</span><input name="pressure_difference_alarm_bar" type="number" min="0.1" step="0.1" required></label>
+        <label class="field"><span>Capacidad depósito (L)</span><input name="tank_capacity_l" type="number" min="1" step="1" required></label>
+        <label class="field"><span>Velocidad mínima trabajo (km/h)</span><input name="min_work_speed_kmh" type="number" min="0" step="0.1" required></label>
+        <label class="field"><span>Caudal mínimo trabajo (L/min)</span><input name="min_work_flow_l_min" type="number" min="0" step="0.1" required></label>
+      </div>
+      <div class="modal-note">
+        La presión ayuda a diagnosticar el circuito. Para conocer los litros reales, conecta también un caudalímetro a la entrada <code>flow_l_min</code> de la API.
+      </div>
+      <div class="modal-actions">
+        <button class="button button-secondary" value="cancel" type="submit">Cancelar</button>
+        <button id="saveSettingsButton" class="button button-primary" value="default" type="submit">Guardar</button>
+      </div>
+    </form>
+  </dialog>
+
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+  <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+</body>
+</html>

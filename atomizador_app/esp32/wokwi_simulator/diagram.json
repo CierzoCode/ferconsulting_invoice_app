@@ -1,0 +1,35 @@
+{
+  "version": 1,
+  "author": "Digitalización Emesa",
+  "editor": "wokwi",
+  "parts": [
+    { "type": "board-esp32-devkit-c-v4", "id": "esp", "top": -10, "left": 260, "attrs": {} },
+    { "type": "wokwi-potentiometer", "id": "potP1", "top": -160, "left": 10, "attrs": { "value": "1638" } },
+    { "type": "wokwi-potentiometer", "id": "potP2", "top": -40, "left": 10, "attrs": { "value": "1605" } },
+    { "type": "wokwi-potentiometer", "id": "potFlow", "top": 80, "left": 10, "attrs": { "value": "1126" } },
+    { "type": "wokwi-potentiometer", "id": "potSpeed", "top": 200, "left": 10, "attrs": { "value": "1501" } },
+    { "type": "wokwi-pushbutton", "id": "pumpButton", "top": 205, "left": 560, "attrs": { "color": "green", "label": "BOMBA" } },
+    { "type": "wokwi-led", "id": "statusLed", "top": 80, "left": 585, "attrs": { "color": "red", "label": "BOMBA ON" } },
+    { "type": "wokwi-resistor", "id": "ledResistor", "top": 143, "left": 530, "rotate": 90, "attrs": { "value": "220" } }
+  ],
+  "connections": [
+    [ "potP1:VCC", "esp:3V3", "red", [] ],
+    [ "potP1:GND", "esp:GND.1", "black", [] ],
+    [ "potP1:SIG", "esp:34", "blue", [] ],
+    [ "potP2:VCC", "esp:3V3", "red", [] ],
+    [ "potP2:GND", "esp:GND.1", "black", [] ],
+    [ "potP2:SIG", "esp:35", "green", [] ],
+    [ "potFlow:VCC", "esp:3V3", "red", [] ],
+    [ "potFlow:GND", "esp:GND.1", "black", [] ],
+    [ "potFlow:SIG", "esp:32", "orange", [] ],
+    [ "potSpeed:VCC", "esp:3V3", "red", [] ],
+    [ "potSpeed:GND", "esp:GND.1", "black", [] ],
+    [ "potSpeed:SIG", "esp:33", "purple", [] ],
+    [ "pumpButton:1.l", "esp:25", "green", [] ],
+    [ "pumpButton:2.l", "esp:GND.2", "black", [] ],
+    [ "esp:2", "statusLed:A", "red", [] ],
+    [ "statusLed:C", "ledResistor:1", "black", [] ],
+    [ "ledResistor:2", "esp:GND.2", "black", [] ]
+  ],
+  "dependencies": {}
+}

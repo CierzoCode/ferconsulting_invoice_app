@@ -97,6 +97,8 @@ create table if not exists public.invoices (
   subtotal numeric(14,2) not null default 0,
   vat_rate numeric(8,4) not null default 0.21,
   vat_amount numeric(14,2) not null default 0,
+  withholding_rate numeric(8,4) not null default 0,
+  withholding_amount numeric(14,2) not null default 0,
   total numeric(14,2) not null default 0,
   status text not null default 'registered',
   notes text,
@@ -118,6 +120,8 @@ alter table public.invoices add column if not exists sent_at timestamptz;
 alter table public.invoices add column if not exists deleted_at timestamptz;
 alter table public.invoices add column if not exists deleted_by bigint references public.users(id);
 alter table public.invoices add column if not exists updated_at timestamptz;
+alter table public.invoices add column if not exists withholding_rate numeric(8,4) not null default 0;
+alter table public.invoices add column if not exists withholding_amount numeric(14,2) not null default 0;
 
 create table if not exists public.audit_log (
   id uuid primary key default gen_random_uuid(),
