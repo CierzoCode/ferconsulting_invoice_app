@@ -902,7 +902,7 @@ function actionButtons(kind, id) {
 }
 
 function clientActionButtons(id) {
-  return `<button class="mini-btn label-btn" data-print-client-label="${id}" type="button">Etiqueta A4</button>${actionButtons('client', id)}`;
+  return `<div class="client-row-actions"><button class="mini-btn label-btn" data-print-client-label="${id}" type="button">Etiqueta A4</button><button class="mini-btn" data-edit-client="${id}" type="button">Editar</button><button class="mini-btn danger" data-delete-client="${id}" type="button">Borrar</button></div>`;
 }
 
 function paymentPreferenceOptions(value = '') {
@@ -944,7 +944,7 @@ function emptyTableRow(colspan, message) {
 function renderClientsTable() {
   const rows = state.clients.filter(c => rowMatchesTerms(c, tableSearchTerms('clients'), ['name', 'tax_id', 'postal_code', 'city', 'province', 'phone', 'email', 'default_payment_method', 'default_delivery_method']));
   qs('#clientsTable').innerHTML = rows.length
-    ? rows.map(c => `<tr><td>${escapeHtml(c.name)}</td><td>${escapeHtml(c.tax_id)}</td><td>${escapeHtml(c.postal_code)}</td><td>${escapeHtml(c.city)}</td><td><input class="inline-client-input" data-client-field="email" data-client-id="${escapeHtml(c.id)}" type="email" value="${escapeHtml(c.email)}" autocomplete="email" aria-label="Email de ${escapeHtml(c.name)}"></td><td><select class="inline-client-select" data-client-field="default_payment_method" data-client-id="${escapeHtml(c.id)}" aria-label="Pago por defecto de ${escapeHtml(c.name)}">${paymentPreferenceOptions(c.default_payment_method || '')}</select></td><td><select class="inline-client-select" data-client-field="default_delivery_method" data-client-id="${escapeHtml(c.id)}" aria-label="Envio por defecto de ${escapeHtml(c.name)}">${deliveryPreferenceOptions(c.default_delivery_method || '')}</select></td><td>${clientActionButtons(c.id)}</td></tr>`).join('')
+    ? rows.map(c => `<tr><td>${escapeHtml(c.name)}</td><td>${escapeHtml(c.tax_id)}</td><td>${escapeHtml(c.postal_code)}</td><td>${escapeHtml(c.city)}</td><td><input class="inline-client-input" data-client-field="email" data-client-id="${escapeHtml(c.id)}" type="email" value="${escapeHtml(c.email)}" autocomplete="email" aria-label="Email de ${escapeHtml(c.name)}"></td><td><select class="inline-client-select" data-client-field="default_payment_method" data-client-id="${escapeHtml(c.id)}" aria-label="Pago por defecto de ${escapeHtml(c.name)}">${paymentPreferenceOptions(c.default_payment_method || '')}</select></td><td><select class="inline-client-select" data-client-field="default_delivery_method" data-client-id="${escapeHtml(c.id)}" aria-label="Envio por defecto de ${escapeHtml(c.name)}">${deliveryPreferenceOptions(c.default_delivery_method || '')}</select></td><td class="client-actions-cell">${clientActionButtons(c.id)}</td></tr>`).join('')
     : emptyTableRow(8, 'Sin clientes que coincidan con la busqueda.');
 }
 

@@ -147,6 +147,10 @@ dt { color: var(--muted); } dd { margin: 0; font-weight: 800; text-align: right;
 .mini-btn { border: 1px solid var(--line); border-radius: 6px; background: #fff; color: var(--accent-dark); font-weight: 800; padding: 7px 10px; margin-right: 6px; cursor: pointer; }
 .mini-btn.danger { color: var(--danger); }
 .mini-btn.label-btn { color: #fff; background: var(--accent-dark); border-color: var(--accent-dark); }
+.client-actions-cell { width: 190px; min-width: 190px; }
+.client-row-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 7px; }
+.client-row-actions .mini-btn { width: 100%; margin: 0; white-space: nowrap; }
+.client-row-actions .label-btn { grid-column: 1 / -1; }
 .client-label-page { display: none; }
 .voice-panel { position: fixed; right: 24px; top: 96px; width: min(460px, calc(100vw - 32px)); z-index: 18; display: none; }
 .voice-panel.show { display: block; }
