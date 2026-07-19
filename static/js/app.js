@@ -901,6 +901,10 @@ function actionButtons(kind, id) {
   return `<button class="mini-btn" data-edit-${kind}="${id}" type="button">Editar</button><button class="mini-btn danger" data-delete-${kind}="${id}" type="button">Borrar</button>`;
 }
 
+function clientActionButtons(id) {
+  return `<button class="mini-btn label-btn" data-print-client-label="${id}" type="button">Etiqueta A4</button>${actionButtons('client', id)}`;
+}
+
 function paymentPreferenceOptions(value = '') {
   const transfer = state.settings.default_payment_method || '';
   const options = [
@@ -938,9 +942,9 @@ function emptyTableRow(colspan, message) {
 }
 
 function renderClientsTable() {
-  const rows = state.clients.filter(c => rowMatchesTerms(c, tableSearchTerms('clients'), ['name', 'tax_id', 'postal_code', 'city', 'email', 'default_payment_method', 'default_delivery_method']));
+  const rows = state.clients.filter(c => rowMatchesTerms(c, tableSearchTerms('clients'), ['name', 'tax_id', 'postal_code', 'city', 'province', 'phone', 'email', 'default_payment_method', 'default_delivery_method']));
   qs('#clientsTable').innerHTML = rows.length
-    ? rows.map(c => `<tr><td>${escapeHtml(c.name)}</td><td>${escapeHtml(c.tax_id)}</td><td>${escapeHtml(c.postal_code)}</td><td>${escapeHtml(c.city)}</td><td><input class="inline-client-input" data-client-field="email" data-client-id="${escapeHtml(c.id)}" type="email" value="${escapeHtml(c.email)}" autocomplete="email" aria-label="Email de ${escapeHtml(c.name)}"></td><td><select class="inline-client-select" data-client-field="default_payment_method" data-client-id="${escapeHtml(c.id)}" aria-label="Pago por defecto de ${escapeHtml(c.name)}">${paymentPreferenceOptions(c.default_payment_method || '')}</select></td><td><select class="inline-client-select" data-client-field="default_delivery_method" data-client-id="${escapeHtml(c.id)}" aria-label="Envio por defecto de ${escapeHtml(c.name)}">${deliveryPreferenceOptions(c.default_delivery_method || '')}</select></td><td>${actionButtons('client', c.id)}</td></tr>`).join('')
+    ? rows.map(c => `<tr><td>${escapeHtml(c.name)}</td><td>${escapeHtml(c.tax_id)}</td><td>${escapeHtml(c.postal_code)}</td><td>${escapeHtml(c.city)}</td><td><input class="inline-client-input" data-client-field="email" data-client-id="${escapeHtml(c.id)}" type="email" value="${escapeHtml(c.email)}" autocomplete="email" aria-label="Email de ${escapeHtml(c.name)}"></td><td><select class="inline-client-select" data-client-field="default_payment_method" data-client-id="${escapeHtml(c.id)}" aria-label="Pago por defecto de ${escapeHtml(c.name)}">${paymentPreferenceOptions(c.default_payment_method || '')}</select></td><td><select class="inline-client-select" data-client-field="default_delivery_method" data-client-id="${escapeHtml(c.id)}" aria-label="Envio por defecto de ${escapeHtml(c.name)}">${deliveryPreferenceOptions(c.default_delivery_method || '')}</select></td><td>${clientActionButtons(c.id)}</td></tr>`).join('')
     : emptyTableRow(8, 'Sin clientes que coincidan con la busqueda.');
 }
 
@@ -1032,7 +1036,7 @@ async function confirmDeleteInvoice(event) {
 }
 
 function clearClientForm() {
-  ['#clientIdEdit', '#clientCodeEdit', '#clientNameEdit', '#clientTaxEdit', '#clientAddressEdit', '#clientPostalEdit', '#clientCityEdit', '#clientEmailEdit', '#clientPaymentEdit', '#clientDeliveryEdit'].forEach(id => qs(id).value = '');
+  ['#clientIdEdit', '#clientCodeEdit', '#clientNameEdit', '#clientTaxEdit', '#clientAddressEdit', '#clientPostalEdit', '#clientCityEdit', '#clientProvinceEdit', '#clientPhoneEdit', '#clientEmailEdit', '#clientPaymentEdit', '#clientDeliveryEdit'].forEach(id => qs(id).value = '');
 }
 
 function clearServiceForm() {
@@ -1092,6 +1096,28 @@ function printInvoicePdf() {
   window.addEventListener('afterprint', restoreTitle);
   window.print();
   setTimeout(restoreTitle, 2000);
+}
+
+function printClientLabel(client) {
+  if (!client) return;
+  qs('#labelClientName').textContent = cleanString(client.name) || 'Cliente';
+  qs('#labelClientAddress').textContent = cleanString(client.address) || '-';
+  qs('#labelClientCity').textContent = [cleanString(client.postal_code), cleanString(client.city)].filter(Boolean).join(' ') || '-';
+  qs('#labelClientProvince').textContent = cleanString(client.province) || '-';
+  qs('#labelClientPhone').textContent = cleanString(client.phone) || '-';
+  qs('#clientLabelPrintable').setAttribute('aria-hidden', 'false');
+  const originalTitle = document.title;
+  document.title = `Etiqueta - ${cleanString(client.name) || 'Cliente'}`.replace(/[\\/:*?"<>|]/g, '-');
+  document.body.classList.add('print-client-label');
+  const restoreLabelPrint = () => {
+    document.body.classList.remove('print-client-label');
+    qs('#clientLabelPrintable').setAttribute('aria-hidden', 'true');
+    document.title = originalTitle;
+    window.removeEventListener('afterprint', restoreLabelPrint);
+  };
+  window.addEventListener('afterprint', restoreLabelPrint);
+  window.print();
+  setTimeout(restoreLabelPrint, 2000);
 }
 
 function updateInvoiceNumberDisplay() {
@@ -1161,6 +1187,8 @@ async function saveClient(event) {
       address: qs('#clientAddressEdit').value.trim(),
       postal_code: qs('#clientPostalEdit').value.trim(),
       city: qs('#clientCityEdit').value.trim(),
+      province: qs('#clientProvinceEdit').value.trim(),
+      phone: qs('#clientPhoneEdit').value.trim(),
       email,
       default_payment_method: qs('#clientPaymentEdit').value,
       default_delivery_method: defaultDeliveryMethod,
@@ -1196,6 +1224,8 @@ async function saveClientInline(target) {
     address: cleanString(nextClient.address),
     postal_code: cleanString(nextClient.postal_code),
     city: cleanString(nextClient.city),
+    province: cleanString(nextClient.province),
+    phone: cleanString(nextClient.phone),
     email: cleanString(nextClient.email),
     default_payment_method: cleanString(nextClient.default_payment_method),
     default_delivery_method: cleanString(nextClient.default_delivery_method),
@@ -1280,9 +1310,16 @@ function bindConfigActions() {
       qs('#clientAddressEdit').value = c.address || '';
       qs('#clientPostalEdit').value = c.postal_code || '';
       qs('#clientCityEdit').value = c.city || '';
+      qs('#clientProvinceEdit').value = c.province || '';
+      qs('#clientPhoneEdit').value = c.phone || '';
       qs('#clientEmailEdit').value = c.email || '';
       qs('#clientPaymentEdit').value = c.default_payment_method || '';
       qs('#clientDeliveryEdit').value = c.default_delivery_method || '';
+    }
+    const labelClientId = target.dataset.printClientLabel;
+    if (labelClientId) {
+      const client = state.clients.find(row => String(row.id) === String(labelClientId));
+      if (client) printClientLabel(client);
     }
     const serviceId = target.dataset.editService;
     if (serviceId) {

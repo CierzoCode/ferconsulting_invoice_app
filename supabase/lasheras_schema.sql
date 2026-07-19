@@ -9,6 +9,8 @@ create table if not exists public.lasheras_proforma_counters
 create table if not exists public.lasheras_clients
   (like public.clients including all);
 alter table public.lasheras_clients add column if not exists country_code text;
+alter table public.lasheras_clients add column if not exists province text;
+alter table public.lasheras_clients add column if not exists phone text;
 create table if not exists public.lasheras_services
   (like public.services including all);
 create table if not exists public.lasheras_users

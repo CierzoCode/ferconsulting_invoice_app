@@ -265,6 +265,8 @@ class ClientIn(BaseModel):
     address: str = ""
     postal_code: str = ""
     city: str = ""
+    province: str = ""
+    phone: str = ""
     email: str = ""
     default_payment_method: str = ""
     default_delivery_method: str = ""
@@ -275,6 +277,8 @@ class ClientIn(BaseModel):
         "address",
         "postal_code",
         "city",
+        "province",
+        "phone",
         "email",
         "default_payment_method",
         "default_delivery_method",

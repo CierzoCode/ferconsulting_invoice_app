@@ -207,12 +207,14 @@
           <label>Direccion<input id="clientAddressEdit" /></label>
           <label>C.P.<input id="clientPostalEdit" /></label>
           <label>Ciudad<input id="clientCityEdit" /></label>
+          <label>Provincia<input id="clientProvinceEdit" /></label>
+          <label>Telefono<input id="clientPhoneEdit" type="tel" /></label>
           <label>Email<input id="clientEmailEdit" type="email" /></label>
           <label>Pago por defecto<select id="clientPaymentEdit"><option value="">Sin preferencia</option><option value="TRANSFERENCIA {{ company.bank_transfer }}">Transferencia</option><option value="GIRO">Giro</option></select></label>
           <label>Envio por defecto<select id="clientDeliveryEdit"><option value="">Sin preferencia</option><option value="email">Email</option><option value="postal">Correo postal</option></select></label>
           <div class="form-actions"><button class="btn primary" type="submit">Guardar cliente</button><button class="btn secondary" id="newClientBtn" type="button">Nuevo</button></div>
         </form>
-        <label class="table-search">Buscar clientes<input id="clientsSearch" class="config-search-input" data-config-search="clients" placeholder="Nombre, CIF, ciudad, email..." autocomplete="off" /></label>
+        <label class="table-search">Buscar clientes<input id="clientsSearch" class="config-search-input" data-config-search="clients" placeholder="Nombre, CIF, ciudad, provincia, telefono..." autocomplete="off" /></label>
         <div class="table-wrap"><table class="config-table clients-config-table"><thead><tr><th>Nombre</th><th>CIF</th><th>C.P.</th><th>Ciudad</th><th>Email</th><th>Pago por defecto</th><th>Envio por defecto</th><th></th></tr></thead><tbody id="clientsTable"></tbody></table></div>
       </section>
 
@@ -250,6 +252,19 @@
       </section>
     </main>
   </div>
+
+  <section class="client-label-page" id="clientLabelPrintable" aria-hidden="true">
+    <div class="client-label-card">
+      {% if company_slug == 'fer-consulting' %}<img class="client-label-logo fer-label-logo" src="{{ url_for('static', path='/img/ferconsulting_logo.png') }}" alt="Fer-consulting" />{% else %}<img class="client-label-logo" src="{{ url_for('static', path='/img/fincas_lasheras_logo.png') }}" alt="Fincas Lasheras Blanco" />{% endif %}
+      <div class="client-label-data">
+        <p class="client-label-name" id="labelClientName"></p>
+        <p><span>Direccion</span><strong id="labelClientAddress"></strong></p>
+        <p><span>Poblacion</span><strong id="labelClientCity"></strong></p>
+        <p><span>Provincia</span><strong id="labelClientProvince"></strong></p>
+        <p><span>Tlf.</span><strong id="labelClientPhone"></strong></p>
+      </div>
+    </div>
+  </section>
 
   <div class="confirm-overlay hidden" id="deleteInvoiceOverlay">
     <form class="confirm-card" id="deleteInvoiceForm">

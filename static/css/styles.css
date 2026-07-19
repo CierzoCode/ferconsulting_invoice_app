@@ -146,6 +146,8 @@ dt { color: var(--muted); } dd { margin: 0; font-weight: 800; text-align: right;
 .inline-client-input { min-width: 220px; }
 .mini-btn { border: 1px solid var(--line); border-radius: 6px; background: #fff; color: var(--accent-dark); font-weight: 800; padding: 7px 10px; margin-right: 6px; cursor: pointer; }
 .mini-btn.danger { color: var(--danger); }
+.mini-btn.label-btn { color: #fff; background: var(--accent-dark); border-color: var(--accent-dark); }
+.client-label-page { display: none; }
 .voice-panel { position: fixed; right: 24px; top: 96px; width: min(460px, calc(100vw - 32px)); z-index: 18; display: none; }
 .voice-panel.show { display: block; }
 .voice-card { background: #fff; border: 1px solid var(--line); border-radius: 8px; box-shadow: var(--shadow); padding: 18px; display: grid; gap: 14px; }
@@ -247,6 +249,40 @@ dt { color: var(--muted); } dd { margin: 0; font-weight: 800; text-align: right;
   @page { size: A4 portrait; margin: 0; }
   html, body { width: var(--print-page-w); height: var(--print-page-h); }
   body { background: white; color: #111; font-size: 10.5px; }
+  body.print-client-label .app-shell,
+  body.print-client-label .login-overlay,
+  body.print-client-label .confirm-overlay,
+  body.print-client-label .voice-panel,
+  body.print-client-label .toast { display: none !important; }
+  body.print-client-label .client-label-page {
+    display: flex !important;
+    width: 595pt;
+    height: 842pt;
+    padding: 54pt;
+    align-items: center;
+    justify-content: center;
+    background: #fff;
+    color: #111;
+  }
+  .client-label-card {
+    width: 100%;
+    min-height: 500pt;
+    border: 2pt solid #111;
+    padding: 46pt;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 46pt;
+    page-break-inside: avoid;
+  }
+  .client-label-logo { display: block; max-width: 280pt; max-height: 125pt; object-fit: contain; margin: 0 auto; }
+  .client-label-logo.fer-label-logo { padding: 12pt; background: var(--brand-green); border-radius: 5pt; }
+  .client-label-data { display: grid; gap: 19pt; }
+  .client-label-data p { margin: 0; }
+  .client-label-data p:not(.client-label-name) { display: grid; grid-template-columns: 88pt 1fr; gap: 14pt; align-items: baseline; }
+  .client-label-data span { font-size: 13pt; font-weight: 700; color: #444; }
+  .client-label-data strong { font-size: 17pt; overflow-wrap: anywhere; }
+  .client-label-name { font-size: 27pt; line-height: 1.2; font-weight: 900; text-align: center; margin-bottom: 12pt !important; overflow-wrap: anywhere; }
   .no-print, .toolbar, .side-panel, .toast { display: none !important; }
   .app-shell { padding: 0; max-width: none; }
   .layout { display: block; }

@@ -19,6 +19,8 @@ create table if not exists public.clients (
   address text,
   postal_code text,
   city text,
+  province text,
+  phone text,
   email text,
   default_payment_method text,
   default_delivery_method text,
@@ -31,6 +33,8 @@ create index if not exists clients_name_idx on public.clients using gin (to_tsve
 alter table public.clients add column if not exists default_payment_method text;
 alter table public.clients add column if not exists default_delivery_method text;
 alter table public.clients add column if not exists country_code text;
+alter table public.clients add column if not exists province text;
+alter table public.clients add column if not exists phone text;
 
 create table if not exists public.proforma_counters (
   year integer primary key,
