@@ -279,8 +279,10 @@ dt { color: var(--muted); } dd { margin: 0; font-weight: 800; text-align: right;
     gap: 46pt;
     page-break-inside: avoid;
   }
-  .client-label-logo { display: block; max-width: 280pt; max-height: 125pt; object-fit: contain; margin: 0 auto; }
-  .client-label-logo.fer-label-logo { padding: 12pt; background: var(--brand-green); border-radius: 5pt; }
+  .client-label-logo-frame { width: 300pt; height: 125pt; display: flex; align-items: center; justify-content: center; margin: 0 auto; overflow: hidden; }
+  .client-label-logo { display: block; max-width: 280pt; max-height: 125pt; object-fit: contain; }
+  .fer-label-logo-frame { height: 90pt; padding: 0 10pt; background: var(--brand-green); border-radius: 5pt; }
+  .client-label-logo.fer-label-logo { width: 100%; max-width: none; max-height: none; transform: translateY(-13pt); }
   .client-label-data { display: grid; gap: 19pt; }
   .client-label-data p { margin: 0; }
   .client-label-data p:not(.client-label-name) { display: grid; grid-template-columns: 88pt 1fr; gap: 14pt; align-items: baseline; }

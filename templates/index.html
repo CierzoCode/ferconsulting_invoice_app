@@ -255,7 +255,7 @@
 
   <section class="client-label-page" id="clientLabelPrintable" aria-hidden="true">
     <div class="client-label-card">
-      {% if company_slug == 'fer-consulting' %}<img class="client-label-logo fer-label-logo" src="{{ url_for('static', path='/img/ferconsulting_logo.png') }}" alt="Fer-consulting" />{% else %}<img class="client-label-logo" src="{{ url_for('static', path='/img/fincas_lasheras_logo.png') }}" alt="Fincas Lasheras Blanco" />{% endif %}
+      {% if company_slug == 'fer-consulting' %}<div class="client-label-logo-frame fer-label-logo-frame"><img class="client-label-logo fer-label-logo" src="{{ url_for('static', path='/img/ferconsulting_logo.png') }}" alt="Fer-consulting" /></div>{% else %}<div class="client-label-logo-frame"><img class="client-label-logo" src="{{ url_for('static', path='/img/fincas_lasheras_logo.png') }}" alt="Fincas Lasheras Blanco" /></div>{% endif %}
       <div class="client-label-data">
         <p class="client-label-name" id="labelClientName"></p>
         <p><span>Direccion</span><strong id="labelClientAddress"></strong></p>
