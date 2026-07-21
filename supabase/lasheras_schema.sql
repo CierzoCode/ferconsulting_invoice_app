@@ -4,6 +4,8 @@ begin;
 
 create table if not exists public.lasheras_invoice_counters
   (like public.invoice_counters including all);
+create table if not exists public.lasheras_s_invoice_counters
+  (like public.invoice_counters including all);
 create table if not exists public.lasheras_proforma_counters
   (like public.proforma_counters including all);
 create table if not exists public.lasheras_clients
@@ -36,6 +38,7 @@ alter table public.lasheras_client_prices alter column id set default nextval('p
 
 create table if not exists public.lasheras_invoices
   (like public.invoices including all);
+alter table public.lasheras_invoices add column if not exists invoice_series text not null default 'numeric';
 alter table public.lasheras_invoices add column if not exists withholding_rate numeric(8,4) not null default 0;
 alter table public.lasheras_invoices add column if not exists withholding_amount numeric(14,2) not null default 0;
 create table if not exists public.lasheras_audit_log
@@ -78,15 +81,36 @@ declare
   v_prefix text;
 begin
   insert into public.lasheras_invoice_counters(year, prefix, next_sequence)
-  values (p_year, p_prefix, 1)
+  values (p_year, '', 1)
   on conflict (year) do nothing;
 
   update public.lasheras_invoice_counters
-     set next_sequence = next_sequence + 1, updated_at = now()
+     set next_sequence = next_sequence + 1, prefix = '', updated_at = now()
    where year = p_year
    returning next_sequence - 1, prefix into v_sequence, v_prefix;
 
-  return query select v_sequence, v_prefix || p_year::text || '.' || v_sequence::text;
+  return query select v_sequence, v_sequence::text;
+end;
+$$;
+
+create or replace function public.reserve_lasheras_s_invoice_number(p_year integer)
+returns table(sequence integer, invoice_number text)
+language plpgsql
+security definer
+as $$
+declare
+  v_sequence integer;
+begin
+  insert into public.lasheras_s_invoice_counters(year, prefix, next_sequence)
+  values (p_year, 'S-', 1)
+  on conflict (year) do nothing;
+
+  update public.lasheras_s_invoice_counters
+     set next_sequence = next_sequence + 1, prefix = 'S-', updated_at = now()
+   where year = p_year
+   returning next_sequence - 1 into v_sequence;
+
+  return query select v_sequence, 'S-' || v_sequence::text;
 end;
 $$;
 
@@ -113,8 +137,11 @@ end;
 $$;
 
 insert into public.lasheras_invoice_counters(year, prefix, next_sequence)
-values (2026, 'FAC-', 104) on conflict (year) do update
+values (2026, '', 104) on conflict (year) do update
 set next_sequence = greatest(public.lasheras_invoice_counters.next_sequence, excluded.next_sequence), updated_at = now();
+update public.lasheras_invoice_counters set prefix = '' where year = 2026;
+insert into public.lasheras_s_invoice_counters(year, prefix, next_sequence)
+values (2026, 'S-', 1) on conflict (year) do nothing;
 insert into public.lasheras_proforma_counters(year, prefix, next_sequence)
 values (2026, 'PRO-', 1) on conflict (year) do nothing;
 insert into public.lasheras_users(id, username, password, email, role, active)

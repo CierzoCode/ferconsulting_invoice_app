@@ -61,7 +61,7 @@ COMPANIES = {
         "bank_transfer": "ES52 0128 7655 5505 0000 8625",
         "phone": "976 813666 - 616 901070",
         "fiscal_year": 2026,
-        "invoice_prefix": "FAC-",
+        "invoice_prefix": "",
         "proforma_prefix": "PRO-",
         "vat_rate": 0.21,
     },
@@ -197,6 +197,7 @@ class InvoiceIn(BaseModel):
     model_config = ConfigDict(extra="ignore")
 
     invoice_type: str = "invoice"
+    invoice_series: str = "numeric"
     invoice_date: Optional[date] = None
     fiscal_year: int = int(SETTINGS.get("fiscal_year", date.today().year))
     client: ClientSnapshot
@@ -213,6 +214,14 @@ class InvoiceIn(BaseModel):
         value = clean_invoice_type(value)
         if value not in VALID_INVOICE_TYPES:
             raise ValueError("Tipo de factura no valido.")
+        return value
+
+    @field_validator("invoice_series")
+    @classmethod
+    def valid_invoice_series(cls, value):
+        value = (value or "numeric").strip().casefold()
+        if value not in {"numeric", "s", "standard", "proforma"}:
+            raise ValueError("Serie de facturacion no valida.")
         return value
 
     @field_validator("delivery_method")
@@ -358,6 +367,7 @@ class InvoiceCounterIn(BaseModel):
     fiscal_year: int = Field(default_factory=lambda: date.today().year, ge=2000, le=2100)
     prefix: str = "FAC-"
     next_sequence: int = Field(ge=1)
+    s_next_sequence: Optional[int] = Field(default=None, ge=1)
 
 
 class InvoiceUpdateIn(InvoiceIn):
@@ -389,6 +399,14 @@ VALID_STATUSES = {"proforma", "pendiente_envio", "enviada", "pagada"}
 def clean_invoice_type(value: str) -> str:
     value = (value or "invoice").strip().casefold()
     return value if value in VALID_INVOICE_TYPES else "invoice"
+
+
+def clean_invoice_series(value: str, invoice_type: str = "invoice") -> str:
+    if clean_invoice_type(invoice_type) == "proforma":
+        return "proforma"
+    if current_company_slug() != "fincas-lasheras-blanco":
+        return "standard"
+    return "s" if (value or "").strip().casefold() == "s" else "numeric"
 
 
 def clean_status(value: str, invoice_type: str = "invoice") -> str:
@@ -561,7 +579,11 @@ def update_client_price_history(client: ClientSnapshot, items: list[dict[str, An
 def next_invoice_preview() -> dict[str, Any]:
     settings = current_settings()
     fiscal_year = int(settings.get("fiscal_year", date.today().year))
-    return require_supabase().preview_invoice_number(fiscal_year)
+    store = require_supabase()
+    preview = store.preview_invoice_number(fiscal_year)
+    if current_company_slug() == "fincas-lasheras-blanco":
+        preview.update(store.preview_lasheras_s_invoice_number(fiscal_year))
+    return preview
 
 
 def next_proforma_preview() -> dict[str, Any]:
@@ -646,10 +668,35 @@ class SupabaseStore:
             self._client = create_client(self.url, self.key)
         return self._client
 
+    def ensure_lasheras_dual_numbering_ready(self) -> None:
+        if current_company_slug() != "fincas-lasheras-blanco":
+            return
+        try:
+            self.client().table("lasheras_s_invoice_counters").select("year").limit(1).execute()
+            self.client().table("lasheras_invoices").select("invoice_series").limit(1).execute()
+        except Exception as exc:
+            raise HTTPException(
+                status_code=503,
+                detail="Falta ejecutar supabase/migration_lasheras_dual_numbering.sql para activar las dos series.",
+            ) from exc
+
     def reserve_invoice_number(self, fiscal_year: int) -> dict[str, Any]:
+        self.ensure_lasheras_dual_numbering_ready()
         prefix = current_settings().get("invoice_prefix", "FAC-")
         rpc_name = "reserve_lasheras_invoice_number" if current_company_slug() == "fincas-lasheras-blanco" else "reserve_invoice_number"
         result = self.client().rpc(rpc_name, {"p_year": fiscal_year, "p_prefix": prefix}).execute()
+        data = result.data[0] if isinstance(result.data, list) else result.data
+        return {"sequence": int(data["sequence"]), "invoice_number": data["invoice_number"]}
+
+    def reserve_lasheras_s_invoice_number(self, fiscal_year: int) -> dict[str, Any]:
+        self.ensure_lasheras_dual_numbering_ready()
+        try:
+            result = self.client().rpc("reserve_lasheras_s_invoice_number", {"p_year": fiscal_year}).execute()
+        except Exception as exc:
+            raise HTTPException(
+                status_code=503,
+                detail="Falta ejecutar supabase/migration_lasheras_dual_numbering.sql para activar la serie S-.",
+            ) from exc
         data = result.data[0] if isinstance(result.data, list) else result.data
         return {"sequence": int(data["sequence"]), "invoice_number": data["invoice_number"]}
 
@@ -668,12 +715,33 @@ class SupabaseStore:
         result = self.client().table(table_name("invoice_counters")).select("next_sequence,prefix").eq("year", fiscal_year).limit(1).execute()
         row = (result.data or [{}])[0]
         sequence = int(row.get("next_sequence") or 1)
-        prefix = row.get("prefix") or prefix
+        stored_prefix = row.get("prefix")
+        prefix = stored_prefix if stored_prefix is not None else prefix
+        if current_company_slug() == "fincas-lasheras-blanco":
+            return {
+                "fiscal_year": fiscal_year,
+                "prefix": "",
+                "sequence": sequence,
+                "invoice_number": str(sequence),
+            }
         return {
             "fiscal_year": fiscal_year,
             "prefix": prefix,
             "sequence": sequence,
             "invoice_number": f"{prefix}{fiscal_year}.{sequence}",
+        }
+
+    def preview_lasheras_s_invoice_number(self, fiscal_year: int) -> dict[str, Any]:
+        try:
+            result = self.client().table("lasheras_s_invoice_counters").select("next_sequence").eq("year", fiscal_year).limit(1).execute()
+            row = (result.data or [{}])[0]
+            sequence = int(row.get("next_sequence") or 1)
+        except Exception:
+            sequence = 1
+        return {
+            "s_prefix": "S-",
+            "s_sequence": sequence,
+            "s_invoice_number": f"S-{sequence}",
         }
 
     def preview_proforma_number(self, fiscal_year: int) -> dict[str, Any]:
@@ -692,18 +760,40 @@ class SupabaseStore:
         }
 
     def set_invoice_counter(self, payload: InvoiceCounterIn) -> dict[str, Any]:
+        prefix = "" if current_company_slug() == "fincas-lasheras-blanco" else payload.prefix
         row = {
             "year": payload.fiscal_year,
-            "prefix": payload.prefix,
+            "prefix": prefix,
             "next_sequence": payload.next_sequence,
             "updated_at": datetime.utcnow().isoformat() + "Z",
         }
         self.client().table(table_name("invoice_counters")).upsert(row, on_conflict="year").execute()
         return {
             "fiscal_year": payload.fiscal_year,
-            "prefix": payload.prefix,
+            "prefix": prefix,
             "sequence": payload.next_sequence,
-            "invoice_number": f"{payload.prefix}{payload.fiscal_year}.{payload.next_sequence}",
+            "invoice_number": str(payload.next_sequence) if current_company_slug() == "fincas-lasheras-blanco" else f"{prefix}{payload.fiscal_year}.{payload.next_sequence}",
+        }
+
+
+    def set_lasheras_s_invoice_counter(self, fiscal_year: int, next_sequence: int) -> dict[str, Any]:
+        row = {
+            "year": fiscal_year,
+            "prefix": "S-",
+            "next_sequence": next_sequence,
+            "updated_at": datetime.utcnow().isoformat() + "Z",
+        }
+        try:
+            self.client().table("lasheras_s_invoice_counters").upsert(row, on_conflict="year").execute()
+        except Exception as exc:
+            raise HTTPException(
+                status_code=503,
+                detail="Falta ejecutar supabase/migration_lasheras_dual_numbering.sql para activar la serie S-.",
+            ) from exc
+        return {
+            "s_prefix": "S-",
+            "s_sequence": next_sequence,
+            "s_invoice_number": f"S-{next_sequence}",
         }
 
     def _list_table(self, table: str, order: str = "id") -> list[dict[str, Any]]:
@@ -764,7 +854,25 @@ class SupabaseStore:
         return self._list_table("users")
 
     def save_client(self, payload: dict[str, Any], row_id: Optional[int] = None) -> dict[str, Any]:
-        return self._upsert_table_row("clients", payload, row_id)
+        try:
+            return self._upsert_table_row("clients", payload, row_id)
+        except HTTPException:
+            raise
+        except Exception as exc:
+            error = str(exc).casefold()
+            missing_label_column = (
+                ("province" in error or "phone" in error)
+                and ("does not exist" in error or "schema cache" in error or "42703" in error)
+            )
+            if missing_label_column:
+                raise HTTPException(
+                    status_code=503,
+                    detail=(
+                        "Falta actualizar la tabla de clientes en Supabase. "
+                        "Ejecuta supabase/migration_client_labels.sql y vuelve a intentarlo."
+                    ),
+                ) from exc
+            raise
 
     def save_service(self, payload: dict[str, Any], row_id: Optional[int] = None) -> dict[str, Any]:
         return self._upsert_table_row("services", payload, row_id)
@@ -816,7 +924,26 @@ class SupabaseStore:
     def save_invoice(self, invoice: dict[str, Any]) -> dict[str, Any]:
         items = invoice.pop("items")
         sb = self.client()
-        inserted = sb.table(table_name("invoices")).insert(invoice).execute().data[0]
+        try:
+            inserted = sb.table(table_name("invoices")).insert(invoice).execute().data[0]
+        except Exception as exc:
+            error = str(exc).casefold()
+            if "invoice_series" in error and ("does not exist" in error or "schema cache" in error or "42703" in error):
+                raise HTTPException(
+                    status_code=503,
+                    detail="Falta ejecutar supabase/migration_lasheras_dual_numbering.sql para guardar la serie de facturacion.",
+                ) from exc
+            if ("withholding_rate" in error or "withholding_amount" in error) and (
+                "does not exist" in error or "schema cache" in error or "42703" in error
+            ):
+                raise HTTPException(
+                    status_code=503,
+                    detail=(
+                        "Falta actualizar la tabla de facturas en Supabase. "
+                        "Ejecuta supabase/migration_invoice_withholding.sql y vuelve a intentarlo."
+                    ),
+                ) from exc
+            raise
         invoice_id = inserted["id"]
         for item in items:
             item["invoice_id"] = invoice_id
@@ -853,7 +980,26 @@ class SupabaseStore:
         sb = self.client()
         existing = self.get_invoice(invoice_id)
         invoice["updated_at"] = datetime.utcnow().isoformat() + "Z"
-        updated = sb.table(table_name("invoices")).update(invoice).eq("id", invoice_id).execute().data
+        try:
+            updated = sb.table(table_name("invoices")).update(invoice).eq("id", invoice_id).execute().data
+        except Exception as exc:
+            error = str(exc).casefold()
+            if "invoice_series" in error and ("does not exist" in error or "schema cache" in error or "42703" in error):
+                raise HTTPException(
+                    status_code=503,
+                    detail="Falta ejecutar supabase/migration_lasheras_dual_numbering.sql para guardar la serie de facturacion.",
+                ) from exc
+            if ("withholding_rate" in error or "withholding_amount" in error) and (
+                "does not exist" in error or "schema cache" in error or "42703" in error
+            ):
+                raise HTTPException(
+                    status_code=503,
+                    detail=(
+                        "Falta actualizar la tabla de facturas en Supabase. "
+                        "Ejecuta supabase/migration_invoice_withholding.sql y vuelve a intentarlo."
+                    ),
+                ) from exc
+            raise
         if not updated:
             raise HTTPException(status_code=404, detail="Factura no encontrada.")
         sb.table(table_name("invoice_items")).delete().eq("invoice_id", invoice_id).execute()
@@ -1018,13 +1164,20 @@ def create_invoice(payload: InvoiceIn, request: Request, user: dict[str, Any] = 
 
     store = active_store()
     invoice_type = clean_invoice_type(payload.invoice_type)
-    reserved = store.reserve_proforma_number(payload.fiscal_year) if invoice_type == "proforma" else store.reserve_invoice_number(payload.fiscal_year)
+    invoice_series = clean_invoice_series(payload.invoice_series, invoice_type)
+    if invoice_type == "proforma":
+        reserved = store.reserve_proforma_number(payload.fiscal_year)
+    elif invoice_series == "s":
+        reserved = store.reserve_lasheras_s_invoice_number(payload.fiscal_year)
+    else:
+        reserved = store.reserve_invoice_number(payload.fiscal_year)
     invoice_id = str(uuid4())
     today = payload.invoice_date or date.today()
 
     invoice = {
         "id": invoice_id,
         "invoice_type": invoice_type,
+        **({"invoice_series": invoice_series} if current_company_slug() == "fincas-lasheras-blanco" else {}),
         "invoice_number": reserved["invoice_number"],
         "fiscal_year": payload.fiscal_year,
         "sequence": reserved["sequence"],
@@ -1081,6 +1234,7 @@ def update_invoice(invoice_id: str, payload: InvoiceUpdateIn, request: Request, 
     current = store.get_invoice(invoice_id)
     invoice = {
         "invoice_type": clean_invoice_type(payload.invoice_type),
+        **({"invoice_series": clean_invoice_series(payload.invoice_series, payload.invoice_type)} if current_company_slug() == "fincas-lasheras-blanco" else {}),
         "invoice_number": current.get("invoice_number"),
         "fiscal_year": payload.fiscal_year,
         "sequence": current.get("sequence"),
@@ -1148,13 +1302,22 @@ def config(user: dict[str, Any] = Depends(require_roles("admin", "gestor", "lect
 
 @app.put("/api/config/invoice-counter")
 def update_invoice_counter(payload: InvoiceCounterIn, request: Request, user: dict[str, Any] = Depends(require_roles("admin"))):
-    prefix = payload.prefix.strip() or "FAC-"
+    is_lasheras = current_company_slug() == "fincas-lasheras-blanco"
+    prefix = "" if is_lasheras else (payload.prefix.strip() or "FAC-")
     counter = InvoiceCounterIn(
         fiscal_year=payload.fiscal_year,
         prefix=prefix,
         next_sequence=payload.next_sequence,
+        s_next_sequence=payload.s_next_sequence,
     )
-    updated = active_store().set_invoice_counter(counter)
+    if is_lasheras and counter.s_next_sequence is None:
+        raise HTTPException(status_code=400, detail="Indica el siguiente numero de la serie S-.")
+    store = active_store()
+    if is_lasheras:
+        store.ensure_lasheras_dual_numbering_ready()
+    updated = store.set_invoice_counter(counter)
+    if is_lasheras:
+        updated.update(store.set_lasheras_s_invoice_counter(counter.fiscal_year, counter.s_next_sequence))
     audit_log("update", user, request, "invoice_counter", payload.fiscal_year, updated)
     return {"settings": {**current_settings(), **updated}, "storage": storage_name()}
 

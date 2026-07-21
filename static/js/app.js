@@ -1,4 +1,5 @@
 const companySlug = window.APP_COMPANY || 'fer-consulting';
+const isLasheras = companySlug === 'fincas-lasheras-blanco';
 const sessionUserKey = `invoice_user_${companySlug}`;
 
 const state = {
@@ -447,6 +448,7 @@ function saveInvoiceDraft() {
     rows_count: state.rows,
     client_input: qs('#clientInput').value,
     invoice_type: qs('#invoiceTypeInput').value,
+    invoice_series: qs('#invoiceSeriesInput')?.value || 'standard',
     vat_rate: qs('#vatRateInput').value,
     withholding_applied: Boolean(qs('#withholdingInput')?.checked),
     payment_method: qs('#paymentMethodInput').value,
@@ -482,6 +484,7 @@ function restoreInvoiceDraft() {
     renderRows(Math.max(10, Number(draft.rows_count || 0), (draft.rows || []).length));
     qs('#clientInput').value = draft.client_input || '';
     qs('#invoiceTypeInput').value = draft.invoice_type || 'invoice';
+    if (qs('#invoiceSeriesInput')) qs('#invoiceSeriesInput').value = draft.invoice_series || 'numeric';
     qs('#vatRateInput').value = draft.vat_rate || '0.21';
     if (qs('#withholdingInput')) qs('#withholdingInput').checked = Boolean(draft.withholding_applied);
     qs('#notesInput').value = draft.notes || '';
@@ -735,6 +738,7 @@ function collectPayload(status = 'pendiente_envio') {
   });
   const payload = {
     invoice_type: qs('#invoiceTypeInput').value,
+    invoice_series: qs('#invoiceSeriesInput')?.value || 'standard',
     invoice_date: state.editingInvoiceDate || todayISO(),
     fiscal_year: Number(state.settings.fiscal_year || new Date().getFullYear()),
     client: clientForPayload(),
@@ -772,7 +776,10 @@ async function registerInvoice() {
     if (data.next) {
       state.settings.sequence = data.next.sequence;
       state.settings.invoice_number = data.next.invoice_number;
-      state.settings.prefix = data.next.prefix || state.settings.prefix;
+      state.settings.prefix = data.next.prefix ?? state.settings.prefix;
+      state.settings.s_sequence = data.next.s_sequence ?? state.settings.s_sequence;
+      state.settings.s_invoice_number = data.next.s_invoice_number ?? state.settings.s_invoice_number;
+      state.settings.s_prefix = data.next.s_prefix ?? state.settings.s_prefix;
       state.settings.fiscal_year = data.next.fiscal_year || state.settings.fiscal_year;
     }
     if (data.proforma_next) {
@@ -801,6 +808,10 @@ function clearForm(showToast = true) {
   qs('#clientInput').value = '';
   qs('#notesInput').value = '';
   qs('#invoiceTypeInput').value = 'invoice';
+  if (qs('#invoiceSeriesInput')) {
+    qs('#invoiceSeriesInput').value = 'numeric';
+    qs('#invoiceSeriesInput').disabled = false;
+  }
   qs('#vatRateInput').value = '0.21';
   if (qs('#withholdingInput')) qs('#withholdingInput').checked = false;
   qs('#deliveryMethodInput').value = 'email';
@@ -842,6 +853,12 @@ async function loadInvoiceIntoForm(invoiceId) {
   qs('#paymentMethodInput').value = invoice.payment_method || state.settings.default_payment_method || qs('#paymentMethodInput').value;
   qs('#deliveryMethodInput').value = invoice.delivery_method || 'email';
   qs('#invoiceTypeInput').value = invoice.invoice_type || 'invoice';
+  if (qs('#invoiceSeriesInput')) {
+    qs('#invoiceSeriesInput').value = invoice.invoice_type === 'proforma'
+      ? 'numeric'
+      : (invoice.invoice_series || (String(invoice.invoice_number || '').startsWith('S-') ? 's' : 'numeric'));
+    qs('#invoiceSeriesInput').disabled = true;
+  }
   updateInvoiceNumberDisplay();
   qs('#vatRateInput').value = String(Number(invoice.vat_rate ?? 0.21));
   if (qs('#withholdingInput')) qs('#withholdingInput').checked = Number(invoice.withholding_rate || 0) === 0.19;
@@ -1051,7 +1068,7 @@ function clearUserForm() {
 }
 
 function invoicePrefixFromSettings() {
-  return state.settings.prefix || state.settings.invoice_prefix || 'FAC-';
+  return state.settings.prefix ?? state.settings.invoice_prefix ?? 'FAC-';
 }
 
 function invoiceYearFromSettings() {
@@ -1064,6 +1081,11 @@ function invoiceSequenceFromSettings() {
 
 function invoiceDisplayParts(invoice) {
   const invoiceNumber = String(invoice?.invoice_number || '').trim();
+  if (isLasheras && invoice?.invoice_type !== 'proforma') {
+    const sMatch = invoiceNumber.match(/^S-(\d+)$/i);
+    if (sMatch) return { prefixText: 'S-', sequence: sMatch[1] };
+    if (/^\d+$/.test(invoiceNumber)) return { prefixText: '', sequence: invoiceNumber };
+  }
   const match = invoiceNumber.match(/^(.+\.)(\d+)$/);
   if (match) {
     return { prefixText: match[1], sequence: match[2] };
@@ -1122,6 +1144,7 @@ function printClientLabel(client) {
 
 function updateInvoiceNumberDisplay() {
   if (state.editingInvoiceId && state.editingInvoiceNumber) {
+    if (qs('#invoiceSeriesInput')) qs('#invoiceSeriesInput').disabled = true;
     qs('#sequenceInput').value = state.editingInvoiceNumber.sequence;
     qs('#sequencePrint').textContent = qs('#sequenceInput').value;
     qs('#invoicePrefixText').textContent = state.editingInvoiceNumber.prefixText;
@@ -1129,20 +1152,27 @@ function updateInvoiceNumberDisplay() {
     return;
   }
   const isProforma = qs('#invoiceTypeInput')?.value === 'proforma';
-  const sequence = isProforma ? Number(state.settings.proforma_sequence || 1) : invoiceSequenceFromSettings();
-  const prefix = isProforma ? (state.settings.proforma_prefix || 'PRO-') : invoicePrefixFromSettings();
+  const seriesInput = qs('#invoiceSeriesInput');
+  if (seriesInput) seriesInput.disabled = isProforma;
+  const isS = isLasheras && !isProforma && seriesInput?.value === 's';
+  const sequence = isProforma
+    ? Number(state.settings.proforma_sequence || 1)
+    : (isS ? Number(state.settings.s_sequence || 1) : invoiceSequenceFromSettings());
+  const prefix = isProforma ? (state.settings.proforma_prefix || 'PRO-') : (isS ? 'S-' : invoicePrefixFromSettings());
   qs('#sequenceInput').value = sequence;
   qs('#sequencePrint').textContent = qs('#sequenceInput').value;
-  qs('#invoicePrefixText').textContent = `${prefix}${invoiceYearFromSettings()}.`;
+  qs('#invoicePrefixText').textContent = isLasheras && !isProforma ? prefix : `${prefix}${invoiceYearFromSettings()}.`;
   updatePrintTexts();
 }
 
 function updateCounterPreview() {
   const year = Number(qs('#counterYearEdit')?.value || invoiceYearFromSettings());
-  const prefix = qs('#counterPrefixEdit')?.value || invoicePrefixFromSettings();
+  const prefix = qs('#counterPrefixEdit')?.value ?? invoicePrefixFromSettings();
   const sequence = Number(qs('#counterSequenceEdit')?.value || invoiceSequenceFromSettings());
   const preview = qs('#counterPreview');
-  if (preview) preview.value = `${prefix}${year}.${sequence}`;
+  if (preview) preview.value = isLasheras ? String(sequence) : `${prefix}${year}.${sequence}`;
+  const sSequence = Number(qs('#sCounterSequenceEdit')?.value || state.settings.s_sequence || 1);
+  if (qs('#sCounterPreview')) qs('#sCounterPreview').value = `S-${sSequence}`;
 }
 
 function fillCounterForm() {
@@ -1150,6 +1180,7 @@ function fillCounterForm() {
   qs('#counterYearEdit').value = invoiceYearFromSettings();
   qs('#counterPrefixEdit').value = invoicePrefixFromSettings();
   qs('#counterSequenceEdit').value = invoiceSequenceFromSettings();
+  if (qs('#sCounterSequenceEdit')) qs('#sCounterSequenceEdit').value = Number(state.settings.s_sequence || 1);
   updateCounterPreview();
 }
 
@@ -1158,8 +1189,9 @@ async function saveInvoiceCounter(event) {
   try {
     const payload = {
       fiscal_year: Number(qs('#counterYearEdit').value),
-      prefix: qs('#counterPrefixEdit').value.trim() || 'FAC-',
+      prefix: isLasheras ? '' : (qs('#counterPrefixEdit').value.trim() || 'FAC-'),
       next_sequence: Number(qs('#counterSequenceEdit').value),
+      s_next_sequence: qs('#sCounterSequenceEdit') ? Number(qs('#sCounterSequenceEdit').value) : null,
     };
     const data = await api('/api/config/invoice-counter', { method: 'PUT', body: JSON.stringify(payload) });
     state.settings = data.settings || state.settings;
@@ -1173,6 +1205,7 @@ async function saveInvoiceCounter(event) {
 
 async function saveClient(event) {
   event.preventDefault();
+  const submitButton = event.submitter || qs('#clientForm button[type="submit"]');
   try {
     const id = qs('#clientIdEdit').value;
     const email = qs('#clientEmailEdit').value.trim();
@@ -1180,6 +1213,7 @@ async function saveClient(event) {
     if (defaultDeliveryMethod === 'email' && !email) {
       return toast('Anade un email al cliente antes de guardar Email como envio por defecto.');
     }
+    submitButton.disabled = true;
     const payload = {
       external_code: qs('#clientCodeEdit').value.trim(),
       name: qs('#clientNameEdit').value.trim(),
@@ -1201,6 +1235,8 @@ async function saveClient(event) {
     fillDataLists();
   } catch (err) {
     toast(err.message || 'No se ha podido guardar el cliente.');
+  } finally {
+    submitButton.disabled = false;
   }
 }
 
@@ -1485,6 +1521,7 @@ async function init() {
   qs('#deliveryMethodInput').addEventListener('change', updatePrintTexts);
   qs('#notesInput').addEventListener('input', syncNotesPrintState);
   qs('#invoiceTypeInput').addEventListener('change', updateInvoiceNumberDisplay);
+  qs('#invoiceSeriesInput')?.addEventListener('change', updateInvoiceNumberDisplay);
   qs('#vatRateInput').addEventListener('change', calculateTotals);
   qs('#withholdingInput')?.addEventListener('change', calculateTotals);
   qs('#sequenceInput').addEventListener('input', () => qs('#sequencePrint').textContent = qs('#sequenceInput').value);
@@ -1498,7 +1535,7 @@ async function init() {
   qs('#serviceForm').addEventListener('submit', saveService);
   qs('#userForm').addEventListener('submit', saveUser);
   qs('#invoiceCounterForm').addEventListener('submit', saveInvoiceCounter);
-  ['#counterYearEdit', '#counterPrefixEdit', '#counterSequenceEdit'].forEach(id => qs(id).addEventListener('input', updateCounterPreview));
+  ['#counterYearEdit', '#counterPrefixEdit', '#counterSequenceEdit', '#sCounterSequenceEdit'].forEach(id => qs(id)?.addEventListener('input', updateCounterPreview));
   qs('#newClientBtn').addEventListener('click', clearClientForm);
   qs('#newServiceBtn').addEventListener('click', clearServiceForm);
   qs('#newUserBtn').addEventListener('click', clearUserForm);

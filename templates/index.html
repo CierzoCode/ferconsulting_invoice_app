@@ -80,6 +80,13 @@
               <option value="invoice">Factura</option>
               <option value="proforma">Proforma</option>
             </select>
+            {% if company_slug == 'fincas-lasheras-blanco' %}
+            <label>Serie:</label>
+            <select id="invoiceSeriesInput">
+              <option value="numeric">Numerica</option>
+              <option value="s">Serie S-</option>
+            </select>
+            {% endif %}
             <label>IVA:</label>
             <select id="vatRateInput">
               <option value="0.21">21%</option>
@@ -189,11 +196,19 @@
       </nav>
 
       <section class="config-panel" id="numberingPanel">
-        <form class="editor-grid numbering-grid" id="invoiceCounterForm">
+        <form class="editor-grid numbering-grid{% if company_slug == 'fincas-lasheras-blanco' %} lasheras-numbering-grid{% endif %}" id="invoiceCounterForm">
           <label>Ejercicio<input id="counterYearEdit" type="number" min="2000" max="2100" required /></label>
+          {% if company_slug == 'fincas-lasheras-blanco' %}
+          <input id="counterPrefixEdit" type="hidden" value="" />
+          <label>Siguiente numero (serie numerica)<input id="counterSequenceEdit" type="number" min="1" step="1" required /></label>
+          <output class="counter-preview" id="counterPreview">125</output>
+          <label>Siguiente numero (serie S-)<input id="sCounterSequenceEdit" type="number" min="1" step="1" required /></label>
+          <output class="counter-preview" id="sCounterPreview">S-1</output>
+          {% else %}
           <label>Prefijo<input id="counterPrefixEdit" required /></label>
           <label>Siguiente numero<input id="counterSequenceEdit" type="number" min="1" step="1" required /></label>
           <output class="counter-preview" id="counterPreview">-</output>
+          {% endif %}
           <div class="form-actions"><button class="btn primary" type="submit">Guardar numeracion</button></div>
         </form>
       </section>
